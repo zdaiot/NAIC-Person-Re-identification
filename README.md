@@ -1,24 +1,32 @@
-# A Modified reid_baseline supporting Multi-GPU and SyncBN training
+## Prepare Dataset
+Download dataset, unzip and put them into `../Input` directory.
 
-Original repo [here](https://github.com/michuanhaohao/reid-strong-baseline)
+Structure of the ../Input folder can be like:
+```bash
 
-However, the original repo uses [ignite](https://github.com/pytorch/ignite) for training and saving the model, which is incompatible with model using [SyncBN](https://github.com/vacancy/Synchronized-BatchNorm-PyTorch), So I reimplement the baseline without the use of ignite.
+```
+Create soft links of datasets in the following directories:
 
-Most code in this repo is borrowed from the original one.
+```bash
+cd dataset/NAIC_data
+ln -s ../../../Input/初赛训练集/ ./初赛训练集
+ln -s ../../../Input/初赛A榜测试集/ ./初赛A榜测试集
+ln -s ../../../Input/submission_example_A.json ./submission_example_A.json
+```
 
 ## Usage
 
 1. Clone the repo using `git clone `
 2. Compile the code for Cython accelerated evaluation code `cd evaluate/eval_cylib && make`
-3. the [SyncBN](https://github.com/vacancy/Synchronized-BatchNorm-PyTorch) module is pure pytorch implementation, so no need to compile once you have pytorch.
+3. the [SyncBN](https://github.com/zdaiot/Synchronized-BatchNorm-PyTorch) module is pure pytorch implementation, so no need to compile once you have pytorch.
 4. Modify the training config in configs folder.
 5. Start training:
 
 ```bash
 # training with only one GPU
-CUDA_VISIBLE_DEVICES=1 python main.py -c configs/debug.yml
+CUDA_VISIBLE_DEVICES=0 python main.py -c configs/debug.yml
 # testing with one GPU
-CUDA_VISIBLE_DEVICES=1 python main.py -t -c configs/debug.yml TEST.WEIGHT /path/to/saved/weights
+CUDA_VISIBLE_DEVICES=0 python main.py -t -c configs/debug.yml TEST.WEIGHT /path/to/saved/weights
 
 # training with multi-GPU
 CUDA_VISIBLE_DEVICES=1,2 python main.py -c configs/debug_multi-gpu.yml
