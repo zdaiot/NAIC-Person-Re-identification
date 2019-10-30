@@ -1,0 +1,13 @@
+.vscode
+.idea
+__pycache__
+*.pyc
+dataset/NAIC_data
+checkpoints/
+*.pkl
+submission.csv
+*.json
+.fuse_hidde*
+debug/
+*.so
+outputs/
