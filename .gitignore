@@ -11,3 +11,4 @@ submission.csv
 debug/
 *.so
 outputs/
+result.json

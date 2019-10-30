@@ -14,6 +14,11 @@ ln -s ../../../Input/初赛A榜测试集/ ./初赛A榜测试集
 ln -s ../../../Input/submission_example_A.json ./submission_example_A.json
 ```
 
+```bash
+pip install pyyaml
+pip install visdom
+```
+
 ## Usage
 
 1. Clone the repo using `git clone `

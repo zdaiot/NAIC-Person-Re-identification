@@ -12,7 +12,7 @@ INPUT:
 
 DATASETS:
   NAMES: 'market1501'
-  DATA_PATH: '/mnt/MyData/Person_reID/reid_baseline_with_syncbn/dataset/NAIC_data/初赛训练集'
+  DATA_PATH: 'dataset/NAIC_data/初赛训练集'
   TRAIN_PATH: 'bounding_box_train'
   QUERY_PATH: 'query'
   GALLERY_PATH: 'bounding_box_test'
@@ -24,11 +24,11 @@ DATALOADER:
 
 SOLVER:
   OPTIMIZER_NAME: 'Adam'
-  MAX_EPOCHS: 30
+  MAX_EPOCHS: 100
   BASE_LR: 0.0001
   BIAS_LR_FACTOR: 1
-  WEIGHT_DECAY: 0.0005
-  WEIGHT_DECAY_BIAS: 0.0005
+  WEIGHT_DECAY: 0.0000
+  WEIGHT_DECAY_BIAS: 0.0000
   IMS_PER_BATCH: 64
 
   STEPS: [20, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240, 255]
@@ -45,7 +45,7 @@ SOLVER:
 TEST:
   IMS_PER_BATCH: 16
   DEBUG: True
-  WEIGHT: "path"
+  WEIGHT: "debug/resnet50_epoch30.pth"
 
 OUTPUT_DIR: "./debug"
 

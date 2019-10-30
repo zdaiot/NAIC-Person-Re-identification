@@ -1,5 +1,6 @@
 import torch
 import os
+import glob
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
@@ -11,13 +12,15 @@ from utils.dataset_statics import get_folds_id
 
 
 class TrainDataset(Dataset):
-    def __init__(self, root='', id_list='', train_id=[], augmentation=None):
+    def __init__(self, root, id_list, train_id, augmentation, mean, std):
         """
 
         :param root: 训练数据集的根目录；类型为str
         :param id_list: 存储全部数据集对应的id的txt文件；类型为str
         :param train_id: 筛选用于训练集的id，类型为list
         :param augmentation: 对样本进行增强；类型为callable
+        :param mean: 每个通道的均值；类型为tuple
+        :param std: 每个通道的方差；类型为tuple
         """
         super(TrainDataset, self).__init__()
         self.root = root
@@ -28,8 +31,8 @@ class TrainDataset(Dataset):
         self.samples_list = self.parse_id_list()
         self.augmentation = augmentation
 
-        self.mean = (0.485, 0.456, 0.406)
-        self.std = (0.229, 0.224, 0.225)
+        self.mean = mean
+        self.std = std
 
     def __getitem__(self, idx):
         """
@@ -88,18 +91,20 @@ class TrainDataset(Dataset):
 
 
 class ValidateDataset(Dataset):
-    def __init__(self, root, samples_list):
+    def __init__(self, root, samples_list, mean, std):
         """
 
         :param root: 训练数据集的根目录；类型为str
         :param samples_list: [[sample_name, label], [sample_name, label]]
+        :param mean: 每个通道的均值；类型为tuple
+        :param std: 每个通道的方差；类型为tuple
         """
         super(ValidateDataset, self).__init__()
         self.root = root
         self.samples_list = samples_list
 
-        self.mean = (0.485, 0.456, 0.406)
-        self.std = (0.229, 0.224, 0.225)
+        self.mean = mean
+        self.std = std
 
     def __getitem__(self, idx):
         """
@@ -133,7 +138,7 @@ class ValidateDataset(Dataset):
 
 
 class queryGallerySeparate():
-    def __init__(self, root='', id_list='', class_id=[]):
+    def __init__(self, root, id_list, class_id):
         """
 
         :param root: 训练数据集的根目录；类型为str
@@ -195,7 +200,47 @@ class queryGallerySeparate():
         return samples_list, labels_list
 
 
-def get_loaders(root, n_splits, batch_size, num_works, shuffle_train):
+class TestDataset(Dataset):
+    def __init__(self, pic_list, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
+        """
+
+        :param pic_list: 数据集路径组成的list；类型为list
+        :param mean: 每个通道的均值；类型为tuple
+        :param std: 每个通道的方差；类型为tuple
+        """
+        super(TestDataset, self).__init__()
+        self.pic_list = pic_list
+        self.mean = mean
+        self.std = std
+
+    def __getitem__(self, idx):
+        """
+
+        :param idx: 索引下标
+        :return image: 该索引对应的图片
+        :return sample_name: 该索引对应的图片名称
+        """
+        sample_name = self.pic_list[idx].split('/')[-1]
+        try:
+            image = Image.open(self.pic_list[idx]).convert('RGB')
+        except IOError:
+            raise IOError('Reading image %s failed.' % self.pic_list[idx])
+        to_tensor = T.ToTensor()
+        normalize = T.Normalize(self.mean, self.std)
+        transform_compose = T.Compose([to_tensor, normalize])
+        image = transform_compose(image)
+
+        return image, sample_name
+
+    def __len__(self):
+        """
+
+        :return: 返回总共有多少张图片
+        """
+        return len(self.pic_list)
+
+
+def get_loaders(root, n_splits, batch_size, num_works, shuffle_train, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
     """ 获得各个折的训练集、验证集的Dataloader，以及各个折的查询集个数
 
     :param root: 训练数据集的根目录；类型为str
@@ -203,6 +248,8 @@ def get_loaders(root, n_splits, batch_size, num_works, shuffle_train):
     :param batch_size: batch的大小；类型为int
     :param num_works: 读取数据时的线程数；类型为int
     :param shuffle_train: 是否打乱训练集；类型为bool
+    :param mean: 每个通道的均值；类型为tuple
+    :param std: 每个通道的方差；类型为tuple
     :return train_dataloader_folds: 所有折训练集的Dataloader；类型为list
     :return valid_dataloader_folds: 所有折验证集的Dataloader；类型为list
     :return num_query_folds: 所有折的查询集个数；类型为int
@@ -216,11 +263,11 @@ def get_loaders(root, n_splits, batch_size, num_works, shuffle_train):
     train_id_folds, valid_id_folds = get_folds_id(train_list_path, n_splits)
     for train_id_fold, valid_id_fold in zip(train_id_folds, valid_id_folds):
         train_dataset = TrainDataset(root=root_pic, id_list=train_list_path, train_id=train_id_fold,
-                                     augmentation=DataAugmentation(erase_flag=True))
+                                     augmentation=DataAugmentation(erase_flag=True), mean=mean, std=std)
 
         query_gallery_separate = queryGallerySeparate(root=root_pic, id_list=train_list_path, class_id=valid_id_fold)
         query_list, gallery_list, num_query = query_gallery_separate.query_gallery_separate()
-        valid_dataset = ValidateDataset(root=root_pic, samples_list=query_list + gallery_list)
+        valid_dataset = ValidateDataset(root=root_pic, samples_list=query_list + gallery_list, mean=mean, std=std)
 
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_works,
                                       pin_memory=True, shuffle=shuffle_train)
