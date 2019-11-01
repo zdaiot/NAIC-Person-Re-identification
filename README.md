@@ -19,6 +19,10 @@ pip install pyyaml
 pip install visdom
 ```
 
+```bash
+python evaluate/eval_cylib/test_cython.py
+```
+
 ## Usage
 
 1. Clone the repo using `git clone `

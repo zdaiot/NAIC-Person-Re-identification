@@ -45,7 +45,7 @@ SOLVER:
 TEST:
   IMS_PER_BATCH: 16
   DEBUG: True
-  WEIGHT: "debug/resnet50_epoch30.pth"
+  WEIGHT: "debug/resnet50_epoch100.pth"
 
 OUTPUT_DIR: "./debug"
 
