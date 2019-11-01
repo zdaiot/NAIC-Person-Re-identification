@@ -13,22 +13,23 @@ https://cython.readthedocs.io/en/latest/src/userguide/numpy_tutorial.html
 """
 
 # Main interface
-cpdef evaluate_cy(distmat, q_pids, g_pids, max_rank):
+cpdef evaluate_cy(distmat, q_pids, g_pids, max_rank, num_return):
     distmat = np.asarray(distmat, dtype=np.float32)
     q_pids = np.asarray(q_pids, dtype=np.int64)
     g_pids = np.asarray(g_pids, dtype=np.int64)
-    return eval_cy(distmat, q_pids, g_pids, max_rank)
+    return eval_cy(distmat, q_pids, g_pids, max_rank, num_return)
 
-cpdef eval_cy(float[:,:] distmat, long[:] q_pids, long[:] g_pids, long max_rank):
+cpdef eval_cy(float[:,:] distmat, long[:] q_pids, long[:] g_pids, long max_rank, long num_return):
     """ Evaluation
 
     :param distmat: 查询集与数据库之间的距离矩阵；类型为numpy；维度为[num_q, num_g]
     :param q_pids: 查询集的类标；类型为numpy；维度为[num_q]
     :param g_pids: 数据库的类标；类型为numpy；维度为[num_g]
-    :param max_rank: 计算1～max_rank的准确率
-    :return all_rank_precison: 1～max_rank的准确率
-    :return mAP: 平均检索精度
-    :return all_AP: 每一个ranking的检索精度
+    :param max_rank: 计算1～max_rank的准确率；类型为int
+    :param num_return: 返回查询到的前 num_return 个结果；类型为int
+    :return all_rank_precison: 1～max_rank的准确率；类型为numpy，维度为[max_rank, ]
+    :return mAP: 平均检索精度；类型为float
+    :return all_AP: 每一个查询样本的检索精度；类型为list；维度为[num_q]
     """
     
     cdef long num_q = distmat.shape[0]
@@ -37,6 +38,9 @@ cpdef eval_cy(float[:,:] distmat, long[:] q_pids, long[:] g_pids, long max_rank)
     if num_g < max_rank:
         max_rank = num_g
         print('Note: number of gallery samples is quite small, got {}'.format(num_g))
+
+    assert num_g >= num_return, "数据库中的图片总数不足num_return！"
+    assert num_return >= max_rank, "num_return必须大于等于max_rank"
     
     cdef:
         # 返回数据中的每一行按行从小到大排序后的位置索引
@@ -61,13 +65,13 @@ cpdef eval_cy(float[:,:] distmat, long[:] q_pids, long[:] g_pids, long max_rank)
     # 对于每一个查询样本
     for q_idx in range(num_q):
         # 对于每一个数据库样本，得到该查询样本与数据库的查询比对结果raw_cmc
-        for g_idx in range(num_g):
+        for g_idx in range(num_return):
             raw_cmc[g_idx] = matches[q_idx][g_idx]
 
-        # compute cmc，cmc得到了返回的前i个结果中有多少个正确的，维度为[num_g]
-        function_cumsum(raw_cmc, cmc, num_g)
+        # compute cmc，cmc得到了返回的前i个结果中有多少个正确的，维度为[num_return]
+        function_cumsum(raw_cmc, cmc, num_return)
         # 对cmc中的大于1的元素置为1，其余不变；cmc第i个元素表示前i个元素是否检索到了正确样本
-        for g_idx in range(num_g):
+        for g_idx in range(num_return):
             if cmc[g_idx] > 1:
                 cmc[g_idx] = 1
         # 在all_cmc的第q_idx行放入cmc的前max_rank的结果，方便下面计算rank1等
@@ -76,11 +80,11 @@ cpdef eval_cy(float[:,:] distmat, long[:] q_pids, long[:] g_pids, long max_rank)
 
         # compute average precision
         # reference: https://en.wikipedia.org/wiki/Evaluation_measures_(information_retrieval)#Average_precision
-        # tmp_cmc得到了返回的前i个结果中有多少个正确的，维度为[num_g]
-        function_cumsum(raw_cmc, tmp_cmc, num_g)
+        # tmp_cmc得到了返回的前i个结果中有多少个正确的，维度为[num_return]
+        function_cumsum(raw_cmc, tmp_cmc, num_return)
         num_ranking = 0
         precison_ranking_sum = 0
-        for g_idx in range(num_g):
+        for g_idx in range(num_return):
             # 查准率计算公式为 对于 每一个检索到的相似图像在检索到的全部图片中的下标 查准率=检索到的相似图片个数/当前检索到的图片总数
             # 首先先计算该g_idx下标查准率；然后与raw_cmc的对应元素相乘，若第g_idx个查询结果为正确的，则计算查准率，否则不计算查准率
             # 然后加到precison_ranking_sum上，求得所有ranking的查准率之和

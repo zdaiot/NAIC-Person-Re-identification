@@ -25,13 +25,14 @@ from eval_reid import eval_func
 num_q = 30
 num_g = 300
 max_rank = 5
+num_return = 200
 distmat = np.random.rand(num_q, num_g) * 20
 q_pids = np.random.randint(0, num_q, size=num_q)
 g_pids = np.random.randint(0, num_g, size=num_g)
 '''
 
-pytime = timeit.timeit('eval_func(distmat, q_pids, g_pids, max_rank, use_cython=False)', setup=setup, number=20)
-cytime = timeit.timeit('eval_func(distmat, q_pids, g_pids, max_rank, use_cython=True)', setup=setup, number=20)
+pytime = timeit.timeit('eval_func(distmat, q_pids, g_pids, max_rank, num_return, use_cython=False)', setup=setup, number=20)
+cytime = timeit.timeit('eval_func(distmat, q_pids, g_pids, max_rank, num_return, use_cython=True)', setup=setup, number=20)
 print('Python time: {} s'.format(pytime))
 print('Cython time: {} s'.format(cytime))
 print('Cython is {} times faster than python\n'.format(pytime / cytime))
@@ -42,11 +43,12 @@ print("=> Check precision")
 num_q = 30
 num_g = 300
 max_rank = 5
+num_return = 200
 distmat = np.random.rand(num_q, num_g) * 20
 q_pids = np.random.randint(0, num_q, size=num_q)
 g_pids = np.random.randint(0, num_g, size=num_g)
 
-cmc, mAP, allAP = eval_func(distmat, q_pids, g_pids, max_rank, use_cython=False)
+cmc, mAP, allAP = eval_func(distmat, q_pids, g_pids, max_rank, num_return, use_cython=False)
 print("Python:\nmAP = {} \ncmc = {} \nallAP = {} \n".format(mAP, cmc, allAP))
-cmc, mAP, allAP = eval_func(distmat, q_pids, g_pids, max_rank, use_cython=True)
+cmc, mAP, allAP = eval_func(distmat, q_pids, g_pids, max_rank, num_return, use_cython=True)
 print("Cython:\nmAP = {} \ncmc = {} \nallAP = {} \n".format(mAP, cmc, allAP))

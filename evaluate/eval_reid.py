@@ -4,25 +4,28 @@ import numpy as np
 from evaluate.eval_cylib.eval_metrics_cy import evaluate_cy
 
 
-def eval_func(distmat, q_pids, g_pids, max_rank=50, use_cython=False):
+def eval_func(distmat, q_pids, g_pids, max_rank=50, num_return=200, use_cython=False):
     """ Evaluation
 
     :param distmat: 查询集与数据库之间的距离矩阵；类型为numpy；维度为[num_q, num_g]
     :param q_pids: 查询集的类标；类型为numpy；维度为[num_q]
     :param g_pids: 数据库的类标；类型为numpy；维度为[num_g]
-    :param max_rank: 计算1～max_rank的准确率
+    :param max_rank: 计算1～max_rank的准确率；类型为int
+    :param num_return: 返回查询到的前 num_return 个结果；类型为int
     :param use_cython: 是否使用C语言版本的评价指标代码；类型为bool
-    :return all_rank_precison: 1～max_rank的准确率
-    :return mAP: 平均检索精度
-    :return all_AP: 每一个ranking的检索精度
+    :return all_rank_precison: 1～max_rank的准确率；类型为numpy，维度为[max_rank, ]
+    :return mAP: 平均检索精度；类型为float
+    :return all_AP: 每一个查询样本的检索精度；类型为list；维度为[num_q]
     """
     if use_cython:
         print('USE CPYTHON!')
-        return evaluate_cy(distmat, q_pids, g_pids, max_rank)
+        return evaluate_cy(distmat, q_pids, g_pids, max_rank, num_return)
     num_q, num_g = distmat.shape
     if num_g < max_rank:
         max_rank = num_g
         print("Note: number of gallery samples is quite small, got {}".format(num_g))
+    assert num_g >= num_return, "数据库中的图片总数不足num_return！"
+    assert num_return >= max_rank, "num_return必须大于等于max_rank"
     # 返回数据中的每一行按行从小到大排序后的位置索引
     indices = np.argsort(distmat, axis=1)
     '''
@@ -31,6 +34,7 @@ def eval_func(distmat, q_pids, g_pids, max_rank=50, use_cython=False):
     每个数据库样本的类标是否真的与第i个查询集的类标相同
     '''
     matches = (g_pids[indices] == q_pids[:, np.newaxis]).astype(np.int32)
+    matches = matches[:, :num_return]
 
     # compute cmc curve for each query
     all_cmc = []
@@ -40,7 +44,7 @@ def eval_func(distmat, q_pids, g_pids, max_rank=50, use_cython=False):
         # 得到该查询样本与数据库的查询比对结果
         q_idx_match = matches[q_idx]
 
-        # 分别求前i个数据的和，例如array([3, 5, 1])，得到array([3, 8, 9])。所以这里得到了返回的前i个结果中有多少个正确的，维度为[num_g]
+        # 分别求前i个数据的和，例如array([3, 5, 1])，得到array([3, 8, 9])。所以这里得到了返回的前i个结果中有多少个正确的，维度为[num_return]
         cmc = q_idx_match.cumsum()
         # 对cmc中的大于1的元素置为1，其余不变；cmc第i个元素表示前i个元素是否检索到了正确样本
         cmc[cmc > 1] = 1
