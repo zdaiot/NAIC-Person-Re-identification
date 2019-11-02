@@ -1,125 +1,80 @@
-from yacs.config import CfgNode as CN
+import json
+import argparse
+from argparse import Namespace
 
-# -----------------------------------------------------------------------------
-# Convention about Training / Test specific parameters
-# -----------------------------------------------------------------------------
-# Whenever an argument can be either used for training or for testing, the
-# corresponding name will be post-fixed by a _TRAIN for a training parameter,
-# or _TEST for a test-specific parameter.
-# For example, the number of images during training will be
-# IMAGES_PER_BATCH_TRAIN, while the number of images for testing will be
-# IMAGES_PER_BATCH_TEST
 
-# -----------------------------------------------------------------------------
-# Config definition
-# -----------------------------------------------------------------------------
+def get_config():
+    use_paras = False
+    if use_paras:
+        with open('./checkpoints/resnet50/' + "params.json", 'r', encoding='utf-8') as json_file:
+            config = json.load(json_file)
+        # dict to namespace
+        config = Namespace(**config)
+    else:
+        parser = argparse.ArgumentParser()
+        '''
+        unet_resnet34时各个电脑可以设置的最大batch size
+        zdaiot:12 z840:16 mxq:48
+        unet_se_renext50
+        hwp: 8
+        unet_resnet50:
+        MXQ: 24
+        '''
+        # model hyper-parameters
+        parser.add_argument('--batch_size', type=int, default=24, help='batch size')
+        parser.add_argument('--epoch', type=int, default=30, help='epoch')
+        parser.add_argument('--num_workers', type=int, default=8)
+        parser.add_argument('--selected_fold', type=list, default=[1], help='what folds for training?')
 
-_C = CN()
+        # dataset set
+        parser.add_argument('--augmentation_flag', type=bool, default=True, help='if true, use augmentation method in train set')
+        parser.add_argument('--n_splits', type=int, default=5, help='n_splits_fold')
+        parser.add_argument('--shuffle_train', type=bool, default=True, help='shuffle train dataset')
+        # TODO
+        parser.add_argument('--crop', type=bool, default=False, help='if true, crop image to [height, width].')
+        parser.add_argument('--height', type=int, default=None, help='the height of cropped image')
+        parser.add_argument('--width', type=int, default=None, help='the width of cropped image')
 
-_C.MODEL = CN()
-_C.MODEL.DEVICE = "cuda"
-_C.MODEL.NAME = 'resnet50'
-_C.MODEL.LAST_STRIDE = 1
-_C.MODEL.LABEL_SMOOTH = False
-_C.MODEL.PRETRAIN_PATH = ''
-# -----------------------------------------------------------------------------
-# INPUT
-# -----------------------------------------------------------------------------
-_C.INPUT = CN()
-# Size of the image during training
-_C.INPUT.SIZE_TRAIN = [384, 128]
-# Size of the image during test
-_C.INPUT.SIZE_TEST = [384, 128]
-# Random probability for image horizontal flip
-_C.INPUT.PROB = 0.0
-# Random probability for random erasing
-_C.INPUT.RE_PROB = 0.0
-# Values to be used for image normalization
-_C.INPUT.PIXEL_MEAN = [0.485, 0.456, 0.406]
-# Values to be used for image normalization
-_C.INPUT.PIXEL_STD = [0.229, 0.224, 0.225]
-# Value of padding size
-_C.INPUT.PADDING = 10
+        # model set 
+        parser.add_argument('--model_name', type=str, default='resnet50',
+                            help='resnet50/se_resnext50_32x4d/efficientnet_b4/resnet50/efficientnet_b4')
+        parser.add_argument('--last_stride', type=int, default=1, help='last stride in the model')
 
-# -----------------------------------------------------------------------------
-# Dataset
-# -----------------------------------------------------------------------------
-_C.DATASETS = CN()
-# List of the dataset names for training, as present in paths_catalog.py
-_C.DATASETS.NAMES = ('market1501')
-# Root PATH to the dataset
-_C.DATASETS.DATA_PATH = '/home/zbc/data/market1501/'
-# PATH to train set
-_C.DATASETS.TRAIN_PATH = 'bounding_box_train'
-# PATH to query set
-_C.DATASETS.QUERY_PATH = 'query'
-# PATH to gallery set
-_C.DATASETS.GALLERY_PATH = 'bounding_box_test'
+        # loss set
+        parser.add_argument('--selected_loss', type=str, default='softmax_triplet',
+                            help='Select the loss function, softmax_triplet/softmax/triplet')
+        parser.add_argument('--margin', type=float, default=0.3, help='margin coefficient in triplet loss')
+        parser.add_argument('--label_smooth', type=bool, default=False, help='use label smooth in cross entropy')
 
-# -----------------------------------------------------------------------------
-# DataLoader
-# -----------------------------------------------------------------------------
-_C.DATALOADER = CN()
-# Number of data loading threads
-_C.DATALOADER.NUM_WORKERS = 8
-# Sampler for data loading
-_C.DATALOADER.SAMPLER = 'softmax'
-# Number of instance for one batch
-_C.DATALOADER.NUM_INSTANCE = 16
+        # 优化器设置
+        parser.add_argument('--optimizer_name', type=str, default='Adam', help='which optimizer to use')
+        parser.add_argument('--momentum_SGD', type=float, default=0.9, help='momentum in SGD')
+        parser.add_argument('--base_lr', type=float, default=5e-5, help='init lr')
+        parser.add_argument('--bias_lr_factor', type=float, default=1, help='')
+        parser.add_argument('--weight_decay', type=float, default=0, help='weight_decay in optimizer')
+        parser.add_argument('--weight_decay_bias', type=float, default=0.0, help='')
 
-# ---------------------------------------------------------------------------- #
-# Solver
-# ---------------------------------------------------------------------------- #
-_C.SOLVER = CN()
-_C.SOLVER.OPTIMIZER_NAME = "Adam"
-_C.SOLVER.FP16 = False
+        # 设置WarmupMultiStepLR
+        parser.add_argument('--steps', type=list, default=[20, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195,
+                                                           210, 225, 240, 255], help='')
+        parser.add_argument('--gamma', type=float, default=0.6, help='')
+        parser.add_argument('--warmup_factor', type=float, default=0.01, help='')
+        parser.add_argument('--warmup_iters', type=int, default=10, help='')
+        parser.add_argument('--warmup_method', type=str, default='linear', help='constant/linear')
 
-_C.SOLVER.MAX_EPOCHS = 50
+        # path set
+        parser.add_argument('--save_path', type=str, default='./checkpoints')
+        parser.add_argument('--dataset_root', type=str, default='./dataset/NAIC_data/初赛训练集')
 
-_C.SOLVER.BASE_LR = 3e-4
-_C.SOLVER.BIAS_LR_FACTOR = 2
+        # 其他设置
+        parser.add_argument('--cython', type=bool, default=True, help='use cython or python to eval')
+        parser.add_argument('--rerank', type=bool, default=True, help='use rerank or not')
 
-_C.SOLVER.MOMENTUM = 0.9
+        config = parser.parse_args()
+        # config = {k: v for k, v in args._get_kwargs()}
 
-_C.SOLVER.MARGIN = 0.3
+    return config
 
-_C.SOLVER.WEIGHT_DECAY = 0.0005
-_C.SOLVER.WEIGHT_DECAY_BIAS = 0.
 
-_C.SOLVER.GAMMA = 0.1
-_C.SOLVER.STEPS = (30, 55)
-
-_C.SOLVER.WARMUP_FACTOR = 1.0 / 3
-_C.SOLVER.WARMUP_ITERS = 500
-_C.SOLVER.WARMUP_METHOD = "linear"
-
-_C.SOLVER.CHECKPOINT_PERIOD = 50
-_C.SOLVER.LOG_PERIOD = 100
-_C.SOLVER.EVAL_PERIOD = 50
-# Number of images per batch
-# This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
-# see 2 images per batch
-_C.SOLVER.IMS_PER_BATCH = 64
-# Whether or not use Cython to eval
-_C.SOLVER.CYTHON = True
-
-# This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
-# see 2 images per batch
-_C.TEST = CN()
-_C.TEST.IMS_PER_BATCH = 128
-_C.TEST.WEIGHT = ""
-_C.TEST.DEBUG = False
-_C.TEST.MULTI_GPU = False
-_C.TEST.CMC = [1,5,10]
-_C.TEST.VIS = False
-_C.TEST.VIS_Q_NUM = 10
-_C.TEST.VIS_G_NUM = 5
-_C.TEST.RERANK = True
-
-# ---------------------------------------------------------------------------- #
-# Misc options
-# ---------------------------------------------------------------------------- #
-_C.OUTPUT_DIR = ""
-
-# Alias for easy usage
-cfg = _C
+if __name__ == '__main__':
+    config = get_config()

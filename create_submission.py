@@ -1,88 +1,118 @@
 import torch
-import torch.nn as nn
 import os
 import glob
 import json
 import codecs
 import numpy as np
-from tqdm import tqdm
+import tqdm
 from torch.utils.data import DataLoader
-from dataset.data import TestDataset
-from main import parse_args
-from config import cfg
-from dataset.data import get_loaders
-from evaluate import eval_func, euclidean_dist, re_rank
-from utils import setup_logger
-from model import build_model, convert_model
+from dataset.NAIC_dataset import TestDataset, get_loaders
+from config import get_config
+from models.model import build_model
+from models.sync_bn.batchnorm import convert_model
+from evaluate import euclidean_dist, re_rank
+from solver import Solver
 
-# 每一个查询样本从数据库中取出最近的10个样本
-num_choose = 200
-root = 'dataset/NAIC_data/初赛A榜测试集'
-pic_path_query = os.path.join(root, 'query_a')
-pic_path_gallery = os.path.join(root, 'gallery_a')
 
-pic_list_query = glob.glob(pic_path_query + '/*.png')
-pic_list_gallery = glob.glob(pic_path_gallery + '/*.png')
+class CreateSubmission():
+    def __init__(self, config, num_classes, fold):
+        self.num_classes = num_classes
+        self.fold = fold
 
-pic_list = pic_list_query + pic_list_gallery
+        self.model_name = config.model_name
+        self.last_stride = config.last_stride
+        self.dataset_root = 'dataset/NAIC_data/初赛A榜测试集'
+        self.rerank = config.rerank
+        self.num_gpus = torch.cuda.device_count()
+        print('Using {} GPUS'.format(self.num_gpus))
 
-test_dataset = TestDataset(pic_list)
-num_query = len(pic_list_query)
+        # 加载模型，只要有GPU，则使用DataParallel函数，当GPU有多个GPU时，调用sync_bn函数
+        self.model = build_model(self.model_name, self.num_classes, self.last_stride)
+        if torch.cuda.is_available():
+            self.model = torch.nn.DataParallel(self.model)
+            if self.num_gpus > 1:
+                self.model = convert_model(self.model)
+            self.model = self.model.cuda()
 
-val_dl = DataLoader(test_dataset, batch_size=8, num_workers=8, pin_memory=True, shuffle=False)
-args = parse_args()
-if args.config_file != "":
-    cfg.merge_from_file(args.config_file)
-cfg.merge_from_list(args.opts)
-cfg.freeze()
+        # 实例化实现各种子函数的 solver 类
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.solver = Solver(self.model, self.device)
 
-logger = setup_logger('reid_baseline.eval', cfg.OUTPUT_DIR, 0, train=False)
+        # 加载权重矩阵
+        self.model_path = os.path.join(config.save_path, config.model_name)
+        self.solver.load_checkpoint(os.path.join(self.model_path, '{}_fold{}_best.pth'.format(self.model_name, self.fold)))
 
-logger.info('Running with config:\n{}'.format(cfg))
+        # 每一个查询样本从数据库中取出最近的10个样本
+        self.num_choose = 200
 
-train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds = get_loaders(cfg.DATASETS.DATA_PATH,
-                                                                                                 n_splits=3,
-                                                                                                 batch_size=32,
-                                                                                                 num_works=8,
-                                                                                                 shuffle_train=True)
-num_classes = num_classes_folds[0]
+        # 加载test Dataloader
+        pic_path_query = os.path.join(self.dataset_root, 'query_a')
+        pic_path_gallery = os.path.join(self.dataset_root, 'gallery_a')
 
-model = build_model(cfg, num_classes)
-if cfg.TEST.MULTI_GPU:
-    model = nn.DataParallel(model)
-    model = convert_model(model)
-    logger.info('Use multi gpu to inference')
-para_dict = torch.load(cfg.TEST.WEIGHT)
-model.load_state_dict(para_dict)
-model.cuda()
-model.eval()
+        pic_list_query = glob.glob(pic_path_query + '/*.png')
+        pic_list_gallery = glob.glob(pic_path_gallery + '/*.png')
 
-feats, paths = [], []
-with torch.no_grad():
-    for batch in tqdm(val_dl, total=len(val_dl), leave=False):
-        data, path = batch
-        paths.extend(path)
-        data = data.cuda()
-        feat = model(data).detach().cpu()
-        feats.append(feat)
-feats = torch.cat(feats, dim=0)
+        pic_list = pic_list_query + pic_list_gallery
 
-query_feat = feats[:num_query]
-query_path = np.array(paths[:num_query])
+        test_dataset = TestDataset(pic_list)
+        self.num_query = len(pic_list_query)
 
-gallery_feat = feats[num_query:]
-gallery_path = np.array(paths[num_query:])
+        self.test_dataloader = DataLoader(test_dataset, batch_size=config.batch_size, num_workers=config.num_workers,
+                                          pin_memory=True, shuffle=False)
 
-# distmat = euclidean_dist(query_feat, gallery_feat)
-distmat = re_rank(query_feat, gallery_feat)
+    def get_result(self):
+        self.model.eval()
+        tbar = tqdm.tqdm(self.test_dataloader)
+        features_all, names_all = [], []
+        with torch.no_grad():
+            for i, (images, names) in enumerate(tbar):
+                # 完成网络的前向传播
+                labels_predict, global_features, features = self.solver.forward(images)
 
-result = {}
-for query_index, query_dist in enumerate(distmat):
-    choose_index = np.argsort(query_dist)[:num_choose]
-    query_name = query_path[query_index]
-    gallery_names = gallery_path[choose_index]
-    result[query_name] = gallery_names.tolist()
+                features_all.append(features.detach().cpu())
+                names_all.extend(names)
 
-print(result)
-with codecs.open('./result.json', 'w', "utf-8") as json_file:
-    json.dump(result, json_file, ensure_ascii=False)
+        features_all = torch.cat(features_all, dim=0)
+        query_features = features_all[:self.num_query]
+        gallery_features = features_all[self.num_query:]
+
+        query_names = np.array(names_all[:self.num_query])
+        gallery_names = np.array(names_all[self.num_query:])
+
+        if self.rerank:
+            distmat = re_rank(query_features, gallery_features)
+        else:
+            distmat = euclidean_dist(query_features, gallery_features)
+
+        result = {}
+        for query_index, query_dist in enumerate(distmat):
+            choose_index = np.argsort(query_dist)[:self.num_choose]
+            query_name = query_names[query_index]
+            gallery_name = gallery_names[choose_index]
+            result[query_name] = gallery_name.tolist()
+
+        with codecs.open('./result.json', 'w', "utf-8") as json_file:
+            json.dump(result, json_file, ensure_ascii=False)
+
+
+if __name__ == "__main__":
+    config = get_config()
+    mean = (0.485, 0.456, 0.406)
+    std = (0.229, 0.224, 0.225)
+    train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds = get_loaders(
+        config.dataset_root,
+        config.n_splits,
+        config.batch_size,
+        config.num_workers,
+        config.shuffle_train,
+        mean,
+        std
+        )
+    for fold_index, [train_loader, valid_loader, num_query, num_classes] in enumerate(zip(train_dataloader_folds,
+                                                  valid_dataloader_folds, num_query_folds, num_classes_folds)):
+        if fold_index not in config.selected_fold:
+            continue
+        # 注意fold之间的因为类别数不同所以模型也不同，所以均要实例化TrainVal
+        create_submission = CreateSubmission(config, num_classes, fold_index)
+        create_submission.get_result()
+

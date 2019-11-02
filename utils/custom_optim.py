@@ -1,16 +1,17 @@
 from bisect import bisect_right
 import torch
 
+
 class WarmupMultiStepLR(torch.optim.lr_scheduler._LRScheduler):
     def __init__(
-        self,
-        optimizer,
-        milestones,
-        gamma=0.1,
-        warmup_factor=1.0 / 3,
-        warmup_iters=500,
-        warmup_method="linear",
-        last_epoch=-1,
+            self,
+            optimizer,
+            milestones,
+            gamma=0.1,
+            warmup_factor=1.0 / 3,
+            warmup_iters=500,
+            warmup_method="linear",
+            last_epoch=-1,
     ):
         if not list(milestones) == sorted(milestones):
             raise ValueError(
@@ -45,21 +46,24 @@ class WarmupMultiStepLR(torch.optim.lr_scheduler._LRScheduler):
             for base_lr in self.base_lrs
         ]
 
-def make_optimizer(cfg, model, num_gpus=1):
+
+# num_gpus TODO
+def make_optimizer(optimizer_name, base_lr, momentum_SGD, bias_lr_factor, weight_decay, weight_decay_bias, model,
+                   num_gpus=1):
     params = []
     for key, value in model.named_parameters():
         if not value.requires_grad:
             continue
-        lr = cfg.SOLVER.BASE_LR * num_gpus
+        lr = base_lr * num_gpus
         # linear scaling rule
-        weight_decay = cfg.SOLVER.WEIGHT_DECAY
         if "bias" in key:
-            lr = cfg.SOLVER.BASE_LR * cfg.SOLVER.BIAS_LR_FACTOR
-            weight_decay = cfg.SOLVER.WEIGHT_DECAY_BIAS
+            lr = base_lr * bias_lr_factor
+            weight_decay = weight_decay_bias
+        else: # TODO
+            weight_decay = weight_decay
         params += [{"params": [value], "lr": lr, "weight_decay": weight_decay}]
-    if cfg.SOLVER.OPTIMIZER_NAME == 'SGD':
-        optimizer = getattr(torch.optim, cfg.SOLVER.OPTIMIZER_NAME)(params, momentum=cfg.SOLVER.MOMENTUM)
+    if momentum_SGD == 'SGD':
+        optimizer = getattr(torch.optim, optimizer_name)(params, momentum=momentum_SGD)
     else:
-        optimizer = getattr(torch.optim, cfg.SOLVER.OPTIMIZER_NAME)(params)
+        optimizer = getattr(torch.optim, optimizer_name)(params)
     return optimizer
-

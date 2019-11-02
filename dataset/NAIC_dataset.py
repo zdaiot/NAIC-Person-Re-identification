@@ -1,6 +1,5 @@
 import torch
 import os
-import glob
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
@@ -125,7 +124,7 @@ class ValidateDataset(Dataset):
         transform_compose = T.Compose([to_tensor, normalize])
         image = transform_compose(image)
 
-        sample_label = torch.tensor(sample_label).byte()
+        sample_label = torch.tensor(sample_label)
 
         return image, sample_label, sample_name
 

@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from .backbones.resnet import ResNet
+from models.backbones.resnet import ResNet
 
 
 def weights_init_kaiming(m):
@@ -54,13 +54,9 @@ class Baseline(nn.Module):
             self.state_dict()[i].copy_(param[i])
 
     def forward(self, x):
-        global_feat = self.gap(self.base(x))  # (b, 2048, 1, 1)
-        global_feat = global_feat.view(global_feat.shape[0], -1)  # flatten to (bs, 2048)
-        feat = self.bottleneck(global_feat)  # normalize for angular softmax
-        if self.training:
-            cls_score = self.classifier(feat)
-            return cls_score, global_feat  # global feature for triplet loss
-        else:
-            return feat
-
+        global_features = self.gap(self.base(x))  # (b, 2048, 1, 1)
+        global_features = global_features.view(global_features.shape[0], -1)  # flatten to (bs, 2048)
+        features = self.bottleneck(global_features)  # normalize for angular softmax
+        cls_score = self.classifier(features)
+        return cls_score, global_features, features  # global feature for triplet loss
 
