@@ -103,7 +103,7 @@ class TrainVal():
                 self.writer.add_scalar('train_loss', loss.item(), global_step+i)
                 self.writer.add_scalar('train_acc', train_acc, global_step + i)
 
-                descript = "Fold: %d, Train Loss: %.7f, Train Acc :%.7f" % (self.fold, loss.item(), train_acc)
+                descript = "Fold: %d, Train Loss: %.7f, Train Acc :%.2f" % (self.fold, loss.item(), train_acc.item()*100)
                 tbar.set_description(desc=descript)
 
             # 每一个epoch完毕之后，执行学习率衰减
@@ -129,6 +129,7 @@ class TrainVal():
             }
 
             self.solver.save_checkpoint(os.path.join(self.model_path, '{}_fold{}.pth'.format(self.model_name, self.fold)), state, is_best)
+            self.writer.add_scalar('lr', self.scheduler.get_lr()[0])
             self.writer.add_scalar('valid_loss', loss_mean_valid, epoch)
             self.writer.add_scalar('rank1', rank1, epoch)
             self.writer.add_scalar('mAP', mAP, epoch)

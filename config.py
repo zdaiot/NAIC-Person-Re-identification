@@ -21,7 +21,7 @@ def get_config():
         MXQ: 24
         '''
         # model hyper-parameters
-        parser.add_argument('--batch_size', type=int, default=24, help='batch size')
+        parser.add_argument('--batch_size', type=int, default=64, help='batch size')
         parser.add_argument('--epoch', type=int, default=30, help='epoch')
         parser.add_argument('--num_workers', type=int, default=8)
         parser.add_argument('--selected_fold', type=list, default=[1], help='what folds for training?')

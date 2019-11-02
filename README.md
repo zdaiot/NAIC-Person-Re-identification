@@ -35,5 +35,12 @@ pip install visdom
 
 
 ```bash
+pip install Cython
+cd evaluate/eval_cylib
+make
+cd ../..
 python evaluate/eval_cylib/test_cython.py
 ```
+
+## TODO
+- [ ] 
