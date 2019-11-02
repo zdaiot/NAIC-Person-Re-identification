@@ -28,9 +28,9 @@ def get_config():
 
         # dataset set
         parser.add_argument('--augmentation_flag', type=bool, default=True, help='if true, use augmentation method in train set')
-        parser.add_argument('--n_splits', type=int, default=5, help='n_splits_fold')
+        parser.add_argument('--n_splits', type=int, default=3, help='n_splits_fold')
         parser.add_argument('--shuffle_train', type=bool, default=True, help='shuffle train dataset')
-        # TODO
+        # TODO not use
         parser.add_argument('--crop', type=bool, default=False, help='if true, crop image to [height, width].')
         parser.add_argument('--height', type=int, default=None, help='the height of cropped image')
         parser.add_argument('--width', type=int, default=None, help='the width of cropped image')

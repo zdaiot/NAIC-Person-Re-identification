@@ -97,13 +97,13 @@ class TrainVal():
                 epoch_loss += loss.item()
                 self.solver.backword(self.optim, loss)
 
-                train_acc = (labels_predict.max(1)[1] == labels.to(self.device)).float().mean() # TODO
+                train_acc = (labels_predict.max(1)[1] == labels.to(self.device)).float().mean()
 
                 # 保存到tensorboard，每一步存储一个
                 self.writer.add_scalar('train_loss', loss.item(), global_step+i)
                 self.writer.add_scalar('train_acc', train_acc, global_step + i)
 
-                descript = "Fold: %d, Train Loss: %.7f, Train Acc :.7%f" % (self.fold, loss.item(), train_acc)
+                descript = "Fold: %d, Train Loss: %.7f, Train Acc :%.7f" % (self.fold, loss.item(), train_acc)
                 tbar.set_description(desc=descript)
 
             # 每一个epoch完毕之后，执行学习率衰减
@@ -187,8 +187,7 @@ if __name__ == "__main__":
         config.num_workers,
         config.shuffle_train,
         mean, 
-        std
-        )
+        std)
     for fold_index, [train_loader, valid_loader, num_query, num_classes] in enumerate(zip(train_dataloader_folds,
                                                   valid_dataloader_folds, num_query_folds, num_classes_folds)):
         if fold_index not in config.selected_fold:
