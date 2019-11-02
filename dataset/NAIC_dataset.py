@@ -12,7 +12,7 @@ from utils.dataset_statics import get_folds_id
 
 class TrainDataset(Dataset):
     def __init__(self, root, id_list, train_id, augmentation, mean, std):
-        """
+        """ 训练数据集的Dataset类
 
         :param root: 训练数据集的根目录；类型为str
         :param id_list: 存储全部数据集对应的id的txt文件；类型为str
@@ -91,7 +91,7 @@ class TrainDataset(Dataset):
 
 class ValidateDataset(Dataset):
     def __init__(self, root, samples_list, mean, std):
-        """
+        """ 验证数据集的Dataset类
 
         :param root: 训练数据集的根目录；类型为str
         :param samples_list: [[sample_name, label], [sample_name, label]]
@@ -138,7 +138,7 @@ class ValidateDataset(Dataset):
 
 class queryGallerySeparate():
     def __init__(self, root, id_list, class_id):
-        """
+        """ 划分查询集与数据库
 
         :param root: 训练数据集的根目录；类型为str
         :param id_list: 存储全部数据集对应的id的txt文件；类型为str
@@ -201,7 +201,7 @@ class queryGallerySeparate():
 
 class TestDataset(Dataset):
     def __init__(self, pic_list, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
-        """
+        """ 测试数据集的Dataset类
 
         :param pic_list: 数据集路径组成的list；类型为list
         :param mean: 每个通道的均值；类型为tuple
@@ -239,7 +239,7 @@ class TestDataset(Dataset):
         return len(self.pic_list)
 
 
-def get_loaders(root, n_splits, batch_size, num_works, shuffle_train, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
+def get_loaders(root, n_splits, batch_size, num_works, shuffle_train, use_erase, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
     """ 获得各个折的训练集、验证集的Dataloader，以及各个折的查询集个数
 
     :param root: 训练数据集的根目录；类型为str
@@ -247,22 +247,25 @@ def get_loaders(root, n_splits, batch_size, num_works, shuffle_train, mean=(0.48
     :param batch_size: batch的大小；类型为int
     :param num_works: 读取数据时的线程数；类型为int
     :param shuffle_train: 是否打乱训练集；类型为bool
+    :param use_erase: 是否在数据增强的时候使用erase；类型为bool
     :param mean: 每个通道的均值；类型为tuple
     :param std: 每个通道的方差；类型为tuple
     :return train_dataloader_folds: 所有折训练集的Dataloader；类型为list
     :return valid_dataloader_folds: 所有折验证集的Dataloader；类型为list
     :return num_query_folds: 所有折的查询集个数；类型为int
     :return num_classes_folds: 所有折训练集的类别数；类型为int
+    :return train_valid_ratio_folds：所有折训练集类别数与查询集类别数的比例
     """
     train_list_path = os.path.join(root, 'train_list.txt')
     root_pic = os.path.join(root, 'train_set')
     train_dataloader_folds, valid_dataloader_folds = list(), list()
     num_query_folds, num_classes_folds = list(), list()
+    train_valid_ratio_folds = list()
     # 分层交叉验证
     train_id_folds, valid_id_folds = get_folds_id(train_list_path, n_splits)
     for train_id_fold, valid_id_fold in zip(train_id_folds, valid_id_folds):
         train_dataset = TrainDataset(root=root_pic, id_list=train_list_path, train_id=train_id_fold,
-                                     augmentation=DataAugmentation(erase_flag=True), mean=mean, std=std)
+                                     augmentation=DataAugmentation(erase_flag=use_erase), mean=mean, std=std)
 
         query_gallery_separate = queryGallerySeparate(root=root_pic, id_list=train_list_path, class_id=valid_id_fold)
         query_list, gallery_list, num_query = query_gallery_separate.query_gallery_separate()
@@ -278,7 +281,8 @@ def get_loaders(root, n_splits, batch_size, num_works, shuffle_train, mean=(0.48
         valid_dataloader_folds.append(valid_dataloader)
         num_query_folds.append(num_query)
         num_classes_folds.append(len(train_id_fold))
-    return train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds
+        train_valid_ratio_folds.append(len(train_id_fold)/len(valid_id_fold))
+    return train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds
 
 
 if __name__ == "__main__":
@@ -287,10 +291,8 @@ if __name__ == "__main__":
     root = 'dataset/NAIC_data/初赛训练集'
     n_splits = 3
 
-    train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds = get_loaders(root,
-                                                                                  n_splits,
-                                                                                  batch_size=8, num_works=8,
-                                                                                  shuffle_train=True)
+    train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds = \
+        get_loaders(root, n_splits, batch_size=8, num_works=8, shuffle_train=True, use_erase=True)
     for train_dataloader, valid_dataloader, num_query, num_classes in zip(train_dataloader_folds,
                                                                           valid_dataloader_folds, num_query_folds,
                                                                           num_classes_folds):

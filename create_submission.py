@@ -21,7 +21,7 @@ class CreateSubmission():
 
         self.model_name = config.model_name
         self.last_stride = config.last_stride
-        self.dataset_root = 'dataset/NAIC_data/初赛A榜测试集'
+        self.test_dataset_root = os.path.join(config.dataset_root, '初赛A榜测试集')
         self.rerank = config.rerank
         self.num_gpus = torch.cuda.device_count()
         print('Using {} GPUS'.format(self.num_gpus))
@@ -46,8 +46,8 @@ class CreateSubmission():
         self.num_choose = 200
 
         # 加载test Dataloader
-        pic_path_query = os.path.join(self.dataset_root, 'query_a')
-        pic_path_gallery = os.path.join(self.dataset_root, 'gallery_a')
+        pic_path_query = os.path.join(self.test_dataset_root, 'query_a')
+        pic_path_gallery = os.path.join(self.test_dataset_root, 'gallery_a')
 
         pic_list_query = glob.glob(pic_path_query + '/*.png')
         pic_list_gallery = glob.glob(pic_path_gallery + '/*.png')
@@ -99,15 +99,10 @@ if __name__ == "__main__":
     config = get_config()
     mean = (0.485, 0.456, 0.406)
     std = (0.229, 0.224, 0.225)
-    train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds = get_loaders(
-        config.dataset_root,
-        config.n_splits,
-        config.batch_size,
-        config.num_workers,
-        config.shuffle_train,
-        mean,
-        std
-        )
+    train_dataset_root = os.path.join(config.dataset_root, '初赛训练集')
+    train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds = get_loaders(
+        train_dataset_root, config.n_splits, config.batch_size, config.num_workers, config.shuffle_train, config.use_erase, mean, std)
+
     for fold_index, [train_loader, valid_loader, num_query, num_classes] in enumerate(zip(train_dataloader_folds,
                                                   valid_dataloader_folds, num_query_folds, num_classes_folds)):
         if fold_index not in config.selected_fold:

@@ -21,7 +21,15 @@ from evaluate import euclidean_dist, eval_func
 
 
 class TrainVal():
-    def __init__(self, config, num_query, num_classes, fold):
+    def __init__(self, config, num_query, num_classes, train_valid_ratio, fold):
+        """
+
+        :param config: 配置参数
+        :param num_query: 该fold查询集的数量；类型为int
+        :param num_classes: 该fold训练集的类别数；类型为int
+        :param train_valid_ratio: 该fold训练集与验证集之间的比例；类型为float
+        :param fold: 训练的哪一折；类型为int
+        """
         self.num_query = num_query
         self.num_classes = num_classes
         self.fold = fold
@@ -31,6 +39,9 @@ class TrainVal():
         self.cython = config.cython
         self.num_gpus = torch.cuda.device_count()
         print('Using {} GPUS'.format(self.num_gpus))
+        print('TRAIN_VALID_RATIO', train_valid_ratio)
+        if self.cython:
+            print('USE CYTHON TO EVAL!')
 
         # 加载模型，只要有GPU，则使用DataParallel函数，当GPU有多个GPU时，调用sync_bn函数
         self.model = build_model(self.model_name, self.num_classes, self.last_stride)
@@ -77,11 +88,13 @@ class TrainVal():
         self.max_average_score = 0
 
     def train(self, train_loader, valid_loader):
-        ''' 完成模型的训练，保存模型与日志
-        Args:
-            train_loader: 训练数据的DataLoader
-            valid_loader: 验证数据的Dataloader
-        '''
+        """ 完成模型的训练，保存模型与日志
+
+        :param train_loader: 训练集的Dataloader
+        :param valid_loader: 验证集的Dataloader
+        :return: None
+        """
+
         global_step = 0
 
         for epoch in range(self.epoch):
@@ -136,11 +149,11 @@ class TrainVal():
             self.writer.add_scalar('average_score', average_score, epoch)
 
     def validation(self, valid_loader):
-        ''' 完成模型的验证过程
+        """ 完成模型的验证过程
 
-        Args:
-            valid_loader: 验证数据的Dataloader
-        '''
+        :param valid_loader: 验证集的Dataloader
+        :return: None
+        """
         self.model.eval()
         tbar = tqdm.tqdm(valid_loader)
         loss_sum = 0
@@ -181,19 +194,16 @@ if __name__ == "__main__":
     config = get_config()
     mean = (0.485, 0.456, 0.406)
     std = (0.229, 0.224, 0.225)
-    train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds = get_loaders(
-        config.dataset_root, 
-        config.n_splits,
-        config.batch_size,
-        config.num_workers,
-        config.shuffle_train,
-        mean, 
-        std)
-    for fold_index, [train_loader, valid_loader, num_query, num_classes] in enumerate(zip(train_dataloader_folds,
-                                                  valid_dataloader_folds, num_query_folds, num_classes_folds)):
+    train_dataset_root = os.path.join(config.dataset_root, '初赛训练集')
+    train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds = get_loaders(
+        train_dataset_root, config.n_splits, config.batch_size, config.num_workers, config.shuffle_train, config.use_erase, mean, std)
+
+    for fold_index, [train_loader, valid_loader, num_query, num_classes, train_valid_ratio] in enumerate(zip(
+        train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds)):
+
         if fold_index not in config.selected_fold:
             continue
         # 注意fold之间的因为类别数不同所以模型也不同，所以均要实例化TrainVal
-        train_val = TrainVal(config, num_query, num_classes, fold_index)
+        train_val = TrainVal(config, num_query, num_classes, train_valid_ratio, fold_index)
         train_val.train(train_loader, valid_loader)
 

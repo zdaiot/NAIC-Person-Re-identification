@@ -70,6 +70,11 @@ class DataAugmentation(object):
             self.random_erase = RandomErasing()
 
     def __call__(self, image):
+        """
+
+        :param image: 传入的图片
+        :return: 经过数据增强后的图片
+        """
         if self.erase_flag:
             image = self.random_erase(image)
         if self.full_aug:
@@ -78,7 +83,7 @@ class DataAugmentation(object):
         return image
 
     def data_augmentation(self, original_image):
-        """进行样本和掩膜的随机增强
+        """ 进行样本和掩膜的随机增强
         Args:
             original_image: 原始图片
             original_mask: 原始掩膜
@@ -88,7 +93,6 @@ class DataAugmentation(object):
         """
         augmentations = Compose([
             HorizontalFlip(p=0.4),
-            # VerticalFlip(p=0.4),
             ShiftScaleRotate(shift_limit=0.07, rotate_limit=0, p=0.4),
             # 直方图均衡化
             CLAHE(p=0.3),

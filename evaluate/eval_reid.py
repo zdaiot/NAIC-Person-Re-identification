@@ -18,7 +18,6 @@ def eval_func(distmat, q_pids, g_pids, max_rank=50, num_return=200, use_cython=F
     :return all_AP: 每一个查询样本的检索精度；类型为list；维度为[num_q]
     """
     if use_cython:
-        print('USE CPYTHON!')
         return evaluate_cy(distmat, q_pids, g_pids, max_rank, num_return)
     num_q, num_g = distmat.shape
     if num_g < max_rank:

@@ -3,7 +3,9 @@ Download dataset, unzip and put them into `../Input` directory.
 
 Structure of the ../Input folder can be like:
 ```bash
-
+初赛训练集
+初赛A榜测试集
+submission_example_A.json
 ```
 Create soft links of datasets in the following directories:
 
@@ -43,4 +45,6 @@ python evaluate/eval_cylib/test_cython.py
 ```
 
 ## TODO
-- [ ] 
+- [ ] Data cleaning
+- [ ] add more model
+- [ ] Normalized custom_optim.py

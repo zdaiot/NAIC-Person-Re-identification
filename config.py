@@ -12,24 +12,17 @@ def get_config():
         config = Namespace(**config)
     else:
         parser = argparse.ArgumentParser()
-        '''
-        unet_resnet34时各个电脑可以设置的最大batch size
-        zdaiot:12 z840:16 mxq:48
-        unet_se_renext50
-        hwp: 8
-        unet_resnet50:
-        MXQ: 24
-        '''
         # model hyper-parameters
         parser.add_argument('--batch_size', type=int, default=64, help='batch size')
-        parser.add_argument('--epoch', type=int, default=30, help='epoch')
+        parser.add_argument('--epoch', type=int, default=100, help='epoch')
         parser.add_argument('--num_workers', type=int, default=8)
-        parser.add_argument('--selected_fold', type=list, default=[1], help='what folds for training?')
+        parser.add_argument('--selected_fold', type=list, default=[0], help='what folds for training?')
 
         # dataset set
         parser.add_argument('--augmentation_flag', type=bool, default=True, help='if true, use augmentation method in train set')
-        parser.add_argument('--n_splits', type=int, default=3, help='n_splits_fold')
+        parser.add_argument('--n_splits', type=int, default=4, help='n_splits_fold')
         parser.add_argument('--shuffle_train', type=bool, default=True, help='shuffle train dataset')
+        parser.add_argument('--use_erase', type=bool, default=True, help='use erase or not in DataAugmentation')
         # TODO not use
         parser.add_argument('--crop', type=bool, default=False, help='if true, crop image to [height, width].')
         parser.add_argument('--height', type=int, default=None, help='the height of cropped image')
@@ -64,7 +57,7 @@ def get_config():
 
         # path set
         parser.add_argument('--save_path', type=str, default='./checkpoints')
-        parser.add_argument('--dataset_root', type=str, default='./dataset/NAIC_data/初赛训练集')
+        parser.add_argument('--dataset_root', type=str, default='./dataset/NAIC_data')
 
         # 其他设置
         parser.add_argument('--cython', type=bool, default=True, help='use cython or python to eval')

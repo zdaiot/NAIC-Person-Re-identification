@@ -4,6 +4,14 @@ from losses.triplet_loss import TripletLoss, CrossEntropyLabelSmooth
 
 
 def get_loss(selected_loss, margin, label_smooth, num_classes):
+    """
+
+    :param selected_loss: loss的种类；类型为str
+    :param margin: triplet loss中的margin参数；类型为float
+    :param label_smooth: 交叉熵函数中是否使用label smooth；类型为bool
+    :param num_classes: 训练集的类别数；类型为int
+    :return: 损失函数；类型为可调用的函数
+    """
     triplet = TripletLoss(margin)
 
     if label_smooth:

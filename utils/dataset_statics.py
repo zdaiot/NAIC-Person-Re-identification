@@ -56,6 +56,8 @@ def get_folds_id(train_list_path, n_splits):
     train_valid_id_number = list()
     for key, value in id_numbers.items():
         if value == 1:
+            pass
+        elif value == 2:
             train_id_pin.append(key)
         else:
             train_valid_id.append(key)
@@ -75,7 +77,7 @@ def get_folds_id(train_list_path, n_splits):
 if __name__ == '__main__':
     train_list_path = 'dataset/NAIC_data/初赛训练集/train_list.txt'
     id_numbers = dataset_statics(train_list_path)
-    print(id_numbers)
+    # print(id_numbers)
 
     numbers_statics = id_numbers_statics(id_numbers)
     print(numbers_statics)
