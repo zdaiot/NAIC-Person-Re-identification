@@ -75,13 +75,13 @@ class TrainVal():
         # 保存json文件和初始化tensorboard
         TIMESTAMP = "{0:%Y-%m-%dT%H-%M-%S}".format(datetime.datetime.now())
         self.writer = SummaryWriter(log_dir=os.path.join(self.model_path, TIMESTAMP))
-        with codecs.open(self.model_path + '/'+ TIMESTAMP + '.json', 'w', "utf-8") as json_file:
+        with codecs.open(self.model_path + '/' + TIMESTAMP + '.json', 'w', "utf-8") as json_file:
             json.dump({k: v for k, v in config._get_kwargs()}, json_file, ensure_ascii=False)
 
         # 设置随机种子，注意交叉验证部分划分训练集和验证集的时候，要保持种子固定
         self.seed = int(time.time())
         seed_torch(self.seed)
-        with open(self.model_path + '/'+ TIMESTAMP + '.pkl','wb') as f:
+        with open(self.model_path + '/' + TIMESTAMP + '.pkl', 'wb') as f:
             pickle.dump({'seed': self.seed}, f, -1)
 
         # 设置其他参数
@@ -113,10 +113,12 @@ class TrainVal():
                 train_acc = (labels_predict.max(1)[1] == labels.to(self.device)).float().mean()
 
                 # 保存到tensorboard，每一步存储一个
-                self.writer.add_scalar('train_loss', loss.item(), global_step+i)
+                self.writer.add_scalar('train_loss', loss.item(), global_step + i)
                 self.writer.add_scalar('train_acc', train_acc, global_step + i)
 
-                descript = "Fold: %d, Train Loss: %.7f, Train Acc :%.2f" % (self.fold, loss.item(), train_acc.item()*100)
+                descript = "Fold: %d, Train Loss: %.7f, Train Acc :%.2f, Lr :%.7f" % (self.fold, loss.item(),
+                                                                                      train_acc.item() * 100,
+                                                                                      self.scheduler.get_lr()[0])
                 tbar.set_description(desc=descript)
 
             # 每一个epoch完毕之后，执行学习率衰减
@@ -124,25 +126,26 @@ class TrainVal():
             global_step += len(train_loader)
 
             # Print the log info
-            print('Finish Epoch [%d/%d], Average Loss: %.7f' % (epoch, self.epoch, epoch_loss/len(tbar)))
+            print('Finish Epoch [%d/%d], Average Loss: %.7f' % (epoch, self.epoch, epoch_loss / len(tbar)))
 
             # 验证模型
             rank1, mAP, average_score, loss_mean_valid = self.validation(valid_loader)
 
-            if average_score > self.max_average_score: 
+            if average_score > self.max_average_score:
                 is_best = True
                 self.max_average_score = average_score
             else:
                 is_best = False
-            
+
             state = {
                 'epoch': epoch,
                 'state_dict': self.model.module.state_dict(),
                 'max_average_score': self.max_average_score,
             }
 
-            self.solver.save_checkpoint(os.path.join(self.model_path, '{}_fold{}.pth'.format(self.model_name, self.fold)), state, is_best)
-            self.writer.add_scalar('lr', self.scheduler.get_lr()[0])
+            self.solver.save_checkpoint(
+                os.path.join(self.model_path, '{}_fold{}.pth'.format(self.model_name, self.fold)), state, is_best)
+            self.writer.add_scalar('lr', self.scheduler.get_lr()[0], epoch)
             self.writer.add_scalar('valid_loss', loss_mean_valid, epoch)
             self.writer.add_scalar('rank1', rank1, epoch)
             self.writer.add_scalar('mAP', mAP, epoch)
@@ -158,7 +161,7 @@ class TrainVal():
         tbar = tqdm.tqdm(valid_loader)
         loss_sum = 0
         features_all, labels_all = [], []
-        with torch.no_grad(): 
+        with torch.no_grad():
             for i, (images, labels, paths) in enumerate(tbar):
                 # 完成网络的前向传播
                 labels_predict, global_features, features = self.solver.forward(images)
@@ -182,10 +185,11 @@ class TrainVal():
         gallery_labels = labels_all[self.num_query:]
 
         distmat = euclidean_dist(query_features, gallery_features)
-        all_rank_precison, mAP, _ = eval_func(distmat.numpy(), query_labels.numpy(), gallery_labels.numpy(), use_cython=self.cython)
+        all_rank_precison, mAP, _ = eval_func(distmat.numpy(), query_labels.numpy(), gallery_labels.numpy(),
+                                              use_cython=self.cython)
 
         rank1 = all_rank_precison[0]
-        average_score = 0.5*rank1 + 0.5*mAP
+        average_score = 0.5 * rank1 + 0.5 * mAP
         print('Rank1: {:.2%}, mAP {:.2%}, average score {:.2%}'.format(rank1, mAP, average_score))
         return rank1, mAP, average_score, loss_mean
 
@@ -196,14 +200,15 @@ if __name__ == "__main__":
     std = (0.229, 0.224, 0.225)
     train_dataset_root = os.path.join(config.dataset_root, '初赛训练集')
     train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds = get_loaders(
-        train_dataset_root, config.n_splits, config.batch_size, config.num_workers, config.shuffle_train, config.use_erase, mean, std)
+        train_dataset_root, config.n_splits, config.batch_size, config.num_workers, config.shuffle_train,
+        config.use_erase, mean, std)
 
     for fold_index, [train_loader, valid_loader, num_query, num_classes, train_valid_ratio] in enumerate(zip(
-        train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds)):
+            train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds,
+            train_valid_ratio_folds)):
 
         if fold_index not in config.selected_fold:
             continue
         # 注意fold之间的因为类别数不同所以模型也不同，所以均要实例化TrainVal
         train_val = TrainVal(config, num_query, num_classes, train_valid_ratio, fold_index)
         train_val.train(train_loader, valid_loader)
-
