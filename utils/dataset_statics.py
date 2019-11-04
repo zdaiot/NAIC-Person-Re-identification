@@ -64,6 +64,7 @@ def get_folds_id(train_list_path, n_splits):
             train_valid_id_number.append(value)
     
     train_id_folds, valid_id_folds = list(), list()
+    # 注意这里的随机种子要固定
     skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=1)
     for train_id_fold, valid_id_fold in skf.split(train_valid_id, train_valid_id_number):
         train_id_fold, valid_id_fold = train_id_fold.tolist(), valid_id_fold.tolist()

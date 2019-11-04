@@ -5,6 +5,7 @@
 """
 import torch
 from torch import nn
+from torch.autograd import Variable
 
 
 def normalize(x, axis=-1):
@@ -14,23 +15,35 @@ def normalize(x, axis=-1):
     Returns:
       x: pytorch Variable, same shape as input
     """
+    # torch.norm：axis参数缩减的维度
     x = 1. * x / (torch.norm(x, 2, axis, keepdim=True).expand_as(x) + 1e-12)
     return x
 
 
 def euclidean_dist(x, y):
     """
+    欧式距离计算公式：对于两个n维向量，
+    math:: d(x,y) = \sqrt {(x_1-y_1)^2 + (x_2-y_2)^2  + ... + (x_n-y_n)^2} = \sqrt {\sum_1^n (x_i - y_i)^2}
+
     Args:
       x: pytorch Variable, with shape [m, d]
       y: pytorch Variable, with shape [n, d]
     Returns:
       dist: pytorch Variable, with shape [m, n]
     """
+    # m, n代表第一个矩阵和第二个矩阵各有多少个样本
     m, n = x.size(0), y.size(0)
+    # torch.pow 对张量按照元素求幂；sum函数中 axis参数缩减的维度；expand：将数据维度从[m, 1]每一个元素复制 n 遍组成一行，最终扩充到[m, n]
+    # 这句话的作用为求出每一个d维向量的平方和，维度为[m, 1]，然后扩充到[m, n]
     xx = torch.pow(x, 2).sum(1, keepdim=True).expand(m, n)
+    # 这句话的作用为求出每一个d维向量的平方和，维度为[n, 1]，然后扩充到[n, m]，然后转置到[m, n]
     yy = torch.pow(y, 2).sum(1, keepdim=True).expand(n, m).t()
+    # + 表示按元素相加
     dist = xx + yy
+    # addmm_ 是Inplace的操作，在原对象基本上进行更改；这句话的作用为将dist中的每一个元素 乘以1，然后减去2倍的 x与y.t() 的矩阵乘法得到的
+    # 对应位置的值，公式为 math:: 1*dist - 2*(x.mm(y.t()))，得到结果中的每一值为 \sum_1^n (x_i - y_i)^2
     dist.addmm_(1, -2, x, y.t())
+    # clamp夹紧，当值小于1e-12的时候置为1e-12，sqrt 按元素求 开方
     dist = dist.clamp(min=1e-12).sqrt()  # for numerical stability
     return dist
 
@@ -53,36 +66,33 @@ def hard_example_mining(dist_mat, labels, return_inds=False):
     """
 
     assert len(dist_mat.size()) == 2
+    # dist_mat为对称矩阵，表示N个样本两两之间的距离
     assert dist_mat.size(0) == dist_mat.size(1)
     N = dist_mat.size(0)
 
-    # shape [N, N]
+    # labels的维度为[N]，expand操作，将其每一个值复制N遍组成一列，最终扩充为[N, N]
+    # is_pos表示样本两两之间是否相似；is_neg表示样本两两之间是否不相似；两者的维度均为[N, N]；类型均为torch.bool
+    # labels.expand(N, N)以及其对称矩阵
     is_pos = labels.expand(N, N).eq(labels.expand(N, N).t())
     is_neg = labels.expand(N, N).ne(labels.expand(N, N).t())
-    is_pos, is_neg = is_pos.long(), is_neg.long()
 
-    # `dist_ap` means distance(anchor, positive)
-    # both `dist_ap` and `relative_p_inds` with shape [N, 1]
-    dist_ap, relative_p_inds = torch.max(
-        dist_mat[is_pos].contiguous().view(N, -1), 1, keepdim=True)
+    # `dist_ap` means distance(anchor, positive)，both `dist_ap` and `relative_p_inds` with shape [N, 1]
+    # dist_mat[is_pos]得到的维度为[N, N, N]，用法为依次取is_pos中的每一行，然后再取每一行中每一个元素作为dist_mat第一维度的索引。
+    # 所以最终维度为[is_pos.size(0), is_pos.size(1), dist_mat.size(1)]
+    dist_ap, relative_p_inds = torch.max(dist_mat[is_pos].contiguous().view(N, -1), 1, keepdim=True)
     # `dist_an` means distance(anchor, negative)
     # both `dist_an` and `relative_n_inds` with shape [N, 1]
-    dist_an, relative_n_inds = torch.min(
-        dist_mat[is_neg].contiguous().view(N, -1), 1, keepdim=True)
+    dist_an, relative_n_inds = torch.min(dist_mat[is_neg].contiguous().view(N, -1), 1, keepdim=True)
     # shape [N]
     dist_ap = dist_ap.squeeze(1)
     dist_an = dist_an.squeeze(1)
 
     if return_inds:
         # shape [N, N]
-        ind = (labels.new().resize_as_(labels)
-               .copy_(torch.arange(0, N).long())
-               .unsqueeze(0).expand(N, N))
+        ind = (labels.new().resize_as_(labels).copy_(torch.arange(0, N).long()).unsqueeze(0).expand(N, N))
         # shape [N, 1]
-        p_inds = torch.gather(
-            ind[is_pos].contiguous().view(N, -1), 1, relative_p_inds.data)
-        n_inds = torch.gather(
-            ind[is_neg].contiguous().view(N, -1), 1, relative_n_inds.data)
+        p_inds = torch.gather(ind[is_pos].contiguous().view(N, -1), 1, relative_p_inds.data)
+        n_inds = torch.gather(ind[is_neg].contiguous().view(N, -1), 1, relative_n_inds.data)
         # shape [N]
         p_inds = p_inds.squeeze(1)
         n_inds = n_inds.squeeze(1)
@@ -107,8 +117,7 @@ class TripletLoss(object):
         if normalize_feature:
             global_feat = normalize(global_feat, axis=-1)
         dist_mat = euclidean_dist(global_feat, global_feat)
-        dist_ap, dist_an = hard_example_mining(
-            dist_mat, labels)
+        dist_ap, dist_an = hard_example_mining(dist_mat, labels)
         y = dist_an.new().resize_as_(dist_an).fill_(1)
         if self.margin is not None:
             loss = self.ranking_loss(dist_an, dist_ap, y)
@@ -147,3 +156,31 @@ class CrossEntropyLabelSmooth(nn.Module):
         targets = (1 - self.epsilon) * targets + self.epsilon / self.num_classes
         loss = (- targets * log_probs).mean(0).sum()
         return loss
+
+
+class TripletLossOrigin(nn.Module):
+    def __init__(self, margin=0):
+        super(TripletLossOrigin, self).__init__()
+        self.margin = margin
+        self.ranking_loss = nn.MarginRankingLoss(margin=margin)
+
+    def __call__(self, global_feat, labels, normalize_feature=False):
+        if len(torch.unique(labels)) == 1: # TODO
+            return 0, 0
+        if normalize_feature:
+            global_feat = normalize(global_feat, axis=-1)
+        dist = euclidean_dist(global_feat, global_feat)
+        n = global_feat.size(0)
+
+        mask = labels.expand(n, n).eq(labels.expand(n, n).t())
+        dist_ap, dist_an = [], []
+        for i in range(n):
+            dist_ap.append(dist[i][mask[i]].max().unsqueeze(0))
+            dist_an.append(dist[i][mask[i] == 0].min().unsqueeze(0))
+        dist_ap = torch.cat(dist_ap)
+        dist_an = torch.cat(dist_an)
+        # Compute ranking hinge loss
+        y = dist_an.new().resize_as_(dist_an).fill_(1)
+        loss = self.ranking_loss(dist_an, dist_ap, y)
+        prec = (dist_an.data > dist_ap.data).sum() * 1. / y.size(0)
+        return loss, prec
