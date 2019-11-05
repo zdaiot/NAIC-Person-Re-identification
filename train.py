@@ -17,7 +17,7 @@ from dataset.NAIC_dataset import get_loaders
 from utils.set_seed import seed_torch
 from models.sync_bn.batchnorm import convert_model
 from utils.custom_optim import make_optimizer, WarmupMultiStepLR
-from evaluate import euclidean_dist, eval_func
+from evaluate import euclidean_dist, eval_func, re_rank
 
 
 class TrainVal():
@@ -36,6 +36,7 @@ class TrainVal():
 
         self.model_name = config.model_name
         self.last_stride = config.last_stride
+        self.rerank = config.rerank
         self.cython = config.cython
         self.num_gpus = torch.cuda.device_count()
         print('Using {} GPUS'.format(self.num_gpus))
@@ -184,7 +185,10 @@ class TrainVal():
         gallery_features = features_all[self.num_query:]
         gallery_labels = labels_all[self.num_query:]
 
-        distmat = euclidean_dist(query_features, gallery_features)
+        if self.rerank:
+            distmat = re_rank(query_features, gallery_features)
+        else:
+            distmat = euclidean_dist(query_features, gallery_features)
         all_rank_precison, mAP, _ = eval_func(distmat.numpy(), query_labels.numpy(), gallery_labels.numpy(),
                                               use_cython=self.cython)
 
