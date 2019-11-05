@@ -5,7 +5,6 @@
 """
 import torch
 from torch import nn
-from torch.autograd import Variable
 
 
 def normalize(x, axis=-1):
@@ -70,18 +69,24 @@ def hard_example_mining(dist_mat, labels, return_inds=False):
     assert dist_mat.size(0) == dist_mat.size(1)
     N = dist_mat.size(0)
 
-    # labels的维度为[N]，expand操作，将其每一个值复制N遍组成一列，最终扩充为[N, N]
-    # is_pos表示样本两两之间是否相似；is_neg表示样本两两之间是否不相似；两者的维度均为[N, N]；类型均为torch.bool
-    # labels.expand(N, N)以及其对称矩阵
+    '''
+    labels的维度为[N]，expand操作，将其每一个值复制N遍组成一列，最终扩充为[N, N]
+    is_pos表示样本两两之间是否相似；is_neg表示样本两两之间是否不相似；两者的维度均为[N, N]；类型均为torch.bool
+    labels.expand(N, N)以及其对称矩阵
+    '''
     is_pos = labels.expand(N, N).eq(labels.expand(N, N).t())
     is_neg = labels.expand(N, N).ne(labels.expand(N, N).t())
 
-    # `dist_ap` means distance(anchor, positive)，both `dist_ap` and `relative_p_inds` with shape [N, 1]
-    # dist_mat[is_pos]得到的维度为[N, N, N]，用法为依次取is_pos中的每一行，然后再取每一行中每一个元素作为dist_mat第一维度的索引。
-    # 所以最终维度为[is_pos.size(0), is_pos.size(1), dist_mat.size(1)]
+    '''
+    `dist_ap` means distance(anchor, positive)，both `dist_ap` and `relative_p_inds` with shape [N, 1]
+    dist_mat[is_pos]得到的维度为[sum(is_pos)]，is_pos为True则取dist_mat相同位置的值。max(axis=1)表示取每一行的最大值
+    值得注意的是，在原作者代码中重写了sampler，保证了sum(is_pos)%N=0
+    '''
     dist_ap, relative_p_inds = torch.max(dist_mat[is_pos].contiguous().view(N, -1), 1, keepdim=True)
-    # `dist_an` means distance(anchor, negative)
-    # both `dist_an` and `relative_n_inds` with shape [N, 1]
+    '''
+    `dist_an` means distance(anchor, negative)
+    both `dist_an` and `relative_n_inds` with shape [N, 1]
+    '''
     dist_an, relative_n_inds = torch.min(dist_mat[is_neg].contiguous().view(N, -1), 1, keepdim=True)
     # shape [N]
     dist_ap = dist_ap.squeeze(1)
@@ -114,6 +119,15 @@ class TripletLoss(object):
             self.ranking_loss = nn.SoftMarginLoss()
 
     def __call__(self, global_feat, labels, normalize_feature=False):
+        """
+
+        :param global_feat: batch个样本的feature；类型为tensor；维度为[batch_size, feature_dim]
+        :param labels: ground truth labels with shape (num_classes)
+        :param normalize_feature: 是否对每个样本的feature做正则归一化；类型为bool
+        :return loss: 计算出的loss值
+        :return dist_ap第i个值：在与第i个样本类别相同的样本中取出距离最远的距离值；类型为tensor；维度为[batch_size]
+        :return dist_an第i个值：在与第i个样本类别不同的样本中取出距离最近的距离值；类型为tensor；维度为[batch_size]
+        """
         if normalize_feature:
             global_feat = normalize(global_feat, axis=-1)
         dist_mat = euclidean_dist(global_feat, global_feat)
@@ -131,7 +145,7 @@ class CrossEntropyLabelSmooth(nn.Module):
 
     Reference:
     Szegedy et al. Rethinking the Inception Architecture for Computer Vision. CVPR 2016.
-    Equation: y = (1 - epsilon) * y + epsilon / K.
+    Equation: q_i = (1 - epsilon) * a_i + epsilon / N.
 
     Args:
         num_classes (int): number of classes.
@@ -151,21 +165,39 @@ class CrossEntropyLabelSmooth(nn.Module):
             targets: ground truth labels with shape (num_classes)
         """
         log_probs = self.logsoftmax(inputs)
+        '''
+        scatter_第一个参数为1表示分别对每行填充；targets.unsqueeze(1)得到的维度为[num_classes, 1]；
+        填充方法为：取出targets的第i行中的第一个元素（每行只有一个元素），记该值为j；则前面tensor中的(i,j)元素填充1；
+        最终targets的维度为[batch_size, num_classes]，每一行代表一个样本，若该样本类别为j，则只有第j元素为1，其余元素为0
+        '''
         targets = torch.zeros(log_probs.size()).scatter_(1, targets.unsqueeze(1).data.cpu(), 1)
-        if self.use_gpu: targets = targets.cuda()
+        if self.use_gpu:
+            targets = targets.cuda()
         targets = (1 - self.epsilon) * targets + self.epsilon / self.num_classes
+        # mean(0)表示缩减第0维，也就是按列求均值，最终维度为[num_classes]，得到该batch内每一个类别的损失，再求和
         loss = (- targets * log_probs).mean(0).sum()
         return loss
 
 
 class TripletLossOrigin(nn.Module):
+    """
+    Reference: https://github.com/Cysu/open-reid/blob/master/reid/loss/triplet.py
+    """
     def __init__(self, margin=0):
         super(TripletLossOrigin, self).__init__()
         self.margin = margin
         self.ranking_loss = nn.MarginRankingLoss(margin=margin)
 
     def __call__(self, global_feat, labels, normalize_feature=False):
-        if len(torch.unique(labels)) == 1: # TODO
+        """
+
+        :param global_feat: batch个样本的feature；类型为tensor；维度为[batch_size, feature_dim]
+        :param labels: ground truth labels with shape (num_classes)
+        :param normalize_feature: 是否对每个样本的feature做正则归一化；类型为bool
+        :return loss: 计算出的loss值
+        :return prec：一个batch内的准确率；对于第i个样本，若与之类别不同样本中最近距离 大于 与之类别相同样本中的最远距离，则判断正确。
+        """
+        if len(torch.unique(labels)) == 1:  # TODO
             return 0, 0
         if normalize_feature:
             global_feat = normalize(global_feat, axis=-1)
@@ -179,8 +211,15 @@ class TripletLossOrigin(nn.Module):
             dist_an.append(dist[i][mask[i] == 0].min().unsqueeze(0))
         dist_ap = torch.cat(dist_ap)
         dist_an = torch.cat(dist_an)
-        # Compute ranking hinge loss
+        # new() 创建一个same data type的tensor，维度为[0]；resize_as_将前面的tensor维度转为和dist_an维度相同（注意不是reshape）；fill_填充1
         y = dist_an.new().resize_as_(dist_an).fill_(1)
+        '''
+        Compute ranking hinge loss；dist_an、dist_ap和y的维度均为[N]；Pytorch中的接口函数：loss(x,y) = max(0, −y∗(x1−x2)+margin)
+        dist_ap第i个值：在与第i个样本类别相同的样本中取出距离最远的距离值；dist_an第i个值：在与第i个样本类别不同的样本中取出距离最近的距离值
+
+        math:: loss(x,y) = max(d(a,p)-d(a,n)+margin, 0) 其中，a表示anchor的feature；p表示positive样本的feature；n表示negative样本的feature
+        '''
         loss = self.ranking_loss(dist_an, dist_ap, y)
+        # 对于第i个样本，若与之类别不同样本中最近距离 大于 与之类别相同样本中的最远距离，则判断正确。
         prec = (dist_an.data > dist_ap.data).sum() * 1. / y.size(0)
         return loss, prec

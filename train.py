@@ -188,8 +188,8 @@ class TrainVal():
         if self.rerank:
             distmat = re_rank(query_features, gallery_features)
         else:
-            distmat = euclidean_dist(query_features, gallery_features)
-        all_rank_precison, mAP, _ = eval_func(distmat.numpy(), query_labels.numpy(), gallery_labels.numpy(),
+            distmat = euclidean_dist(query_features, gallery_features).numpy()
+        all_rank_precison, mAP, _ = eval_func(distmat, query_labels.numpy(), gallery_labels.numpy(),
                                               use_cython=self.cython)
 
         rank1 = all_rank_precison[0]
