@@ -34,7 +34,7 @@ def get_config():
         parser.add_argument('--last_stride', type=int, default=1, help='last stride in the model')
 
         # loss set
-        parser.add_argument('--selected_loss', type=str, default='softmax_triplet',
+        parser.add_argument('--selected_loss', type=str, default='softmax',
                             help='Select the loss function, softmax_triplet/softmax/triplet')
         parser.add_argument('--margin', type=float, default=0.3, help='margin coefficient in triplet loss')
         parser.add_argument('--label_smooth', type=bool, default=False, help='use label smooth in cross entropy')
@@ -61,7 +61,7 @@ def get_config():
 
         # 其他设置
         parser.add_argument('--cython', type=bool, default=True, help='use cython or python to eval')
-        parser.add_argument('--rerank', type=bool, default=True, help='use rerank or not')
+        parser.add_argument('--rerank', type=bool, default=False, help='use rerank or not')
 
         config = parser.parse_args()
         # config = {k: v for k, v in args._get_kwargs()}
