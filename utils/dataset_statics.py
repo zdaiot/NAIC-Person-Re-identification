@@ -57,8 +57,8 @@ def get_folds_id(train_list_path, n_splits):
     for key, value in id_numbers.items():
         if value == 1:
             pass
-        elif value == 2:
-            train_id_pin.append(key)
+        # elif value == 2:
+        #     train_id_pin.append(key)
         else:
             train_valid_id.append(key)
             train_valid_id_number.append(value)

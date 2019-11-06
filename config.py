@@ -20,7 +20,7 @@ def get_config():
 
         # dataset set
         parser.add_argument('--augmentation_flag', type=bool, default=True, help='if true, use augmentation method in train set')
-        parser.add_argument('--n_splits', type=int, default=4, help='n_splits_fold')
+        parser.add_argument('--n_splits', type=int, default=2, help='n_splits_fold')
         parser.add_argument('--shuffle_train', type=bool, default=True, help='shuffle train dataset')
         parser.add_argument('--use_erase', type=bool, default=True, help='use erase or not in DataAugmentation')
         # TODO not use

@@ -1,4 +1,16 @@
-## Prepare Dataset
+## Requirements
+- Pytorch 1.1.0
+- Torchvision 0.3.0
+- Python3.7
+
+## How to run
+### Clone Our Project
+```bash
+git clone https://github.com/zdaiot/NAIC-Person-Re-identification.git
+cd NAIC-Person-Re-identification
+```
+
+### Prepare Dataset
 Download dataset, unzip and put them into `../Input` directory.
 
 Structure of the ../Input folder can be like:
@@ -10,7 +22,9 @@ submission_example_A.json
 Create soft links of datasets in the following directories:
 
 ```bash
-cd dataset/NAIC_data
+cd dataset
+mkdir NAIC_data
+cd NAIC_data
 ln -s ../../../Input/初赛训练集/ ./初赛训练集
 ln -s ../../../Input/初赛A榜测试集/ ./初赛A榜测试集
 ln -s ../../../Input/submission_example_A.json ./submission_example_A.json
@@ -18,28 +32,13 @@ ln -s ../../../Input/submission_example_A.json ./submission_example_A.json
 ln -s ~/.cache/torch/checkpoints/resnet50-19c8e357.pth ./ 
 ``` 
 
-```bash
-pip install pyyaml
-pip install visdom
-```
-
-## Usage
-
-1. Clone the repo using `git clone `
-2. Compile the code for Cython accelerated evaluation code `cd evaluate/eval_cylib && make`
-3. the [SyncBN](https://github.com/zdaiot/Synchronized-BatchNorm-PyTorch) module is pure pytorch implementation, so no need to compile once you have pytorch.
-4. Modify the training config in configs folder.
-5. Start training:
-
-```bash
-
-```
-
+### Make Eval Code
 
 ```bash
 pip install Cython
 cd evaluate/eval_cylib
 make
+# if you want to test the code
 cd ../..
 python evaluate/eval_cylib/test_cython.py
 ```
