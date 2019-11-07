@@ -130,7 +130,7 @@ class TrainVal():
             print('Finish Epoch [%d/%d], Average Loss: %.7f' % (epoch, self.epoch, epoch_loss / len(tbar)))
 
             # 验证模型
-            rank1, mAP, average_score, loss_mean_valid = self.validation(valid_loader)
+            rank1, mAP, average_score = self.validation(valid_loader)
 
             if average_score > self.max_average_score:
                 is_best = True
@@ -147,7 +147,6 @@ class TrainVal():
             self.solver.save_checkpoint(
                 os.path.join(self.model_path, '{}_fold{}.pth'.format(self.model_name, self.fold)), state, is_best)
             self.writer.add_scalar('lr', self.scheduler.get_lr()[0], epoch)
-            self.writer.add_scalar('valid_loss', loss_mean_valid, epoch)
             self.writer.add_scalar('rank1', rank1, epoch)
             self.writer.add_scalar('mAP', mAP, epoch)
             self.writer.add_scalar('average_score', average_score, epoch)
@@ -166,15 +165,8 @@ class TrainVal():
             for i, (images, labels, paths) in enumerate(tbar):
                 # 完成网络的前向传播
                 labels_predict, global_features, features = self.solver.forward(images)
-                loss = self.solver.cal_loss(labels_predict, global_features, labels, self.criterion)
-                loss_sum += loss.item()
-
                 features_all.append(features.detach().cpu())
                 labels_all.append(labels)
-
-                descript = "Val Loss: {:.7f}".format(loss.item())
-                tbar.set_description(desc=descript)
-        loss_mean = loss_sum / len(tbar)
 
         features_all = torch.cat(features_all, dim=0)
         labels_all = torch.cat(labels_all, dim=0)
@@ -195,7 +187,7 @@ class TrainVal():
         rank1 = all_rank_precison[0]
         average_score = 0.5 * rank1 + 0.5 * mAP
         print('Rank1: {:.2%}, mAP {:.2%}, average score {:.2%}'.format(rank1, mAP, average_score))
-        return rank1, mAP, average_score, loss_mean
+        return rank1, mAP, average_score
 
 
 if __name__ == "__main__":
