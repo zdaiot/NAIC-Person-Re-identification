@@ -7,7 +7,7 @@ from albumentations import (
     RandomBrightness, RandomContrast, RandomGamma, OneOf,
     ToFloat, ShiftScaleRotate, GridDistortion, ElasticTransform, JpegCompression, HueSaturationValue,
     RGBShift, RandomBrightnessContrast, RandomContrast, Blur, MotionBlur, MedianBlur, GaussNoise,CenterCrop,
-    IAAAdditiveGaussianNoise,GaussNoise,Cutout,Rotate, Normalize, Crop, RandomCrop
+    IAAAdditiveGaussianNoise,GaussNoise,Cutout,Rotate, Normalize, Crop, RandomCrop, Resize
 )
 from PIL import Image
 
@@ -24,7 +24,7 @@ class RandomErasing(object):
          mean: Erasing value.
     """
 
-    def __init__(self, probability=0.5, sl=0.02, sh=0.4, r1=0.3, mean=(0.4914, 0.4822, 0.4465)):
+    def __init__(self, probability=0.5, sl=0.02, sh=0.4, r1=0.3, mean=(0.485, 0.456, 0.406)):
         self.probability = probability
         self.mean = mean
         self.sl = sl
@@ -92,6 +92,7 @@ class DataAugmentation(object):
             mask_aug: 增强后的掩膜
         """
         augmentations = Compose([
+            Resize(224, 224),
             HorizontalFlip(p=0.4),
             ShiftScaleRotate(shift_limit=0.07, rotate_limit=0, p=0.4),
             # 直方图均衡化

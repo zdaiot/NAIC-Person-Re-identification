@@ -119,9 +119,10 @@ class ValidateDataset(Dataset):
             image = Image.open(sample_name).convert('RGB')
         except IOError:
             raise IOError('Reading image %s failed.' % sample_name)
+        resize = T.Resize((224, 224))
         to_tensor = T.ToTensor()
         normalize = T.Normalize(self.mean, self.std)
-        transform_compose = T.Compose([to_tensor, normalize])
+        transform_compose = T.Compose([resize, to_tensor, normalize])
         image = transform_compose(image)
 
         sample_label = torch.tensor(sample_label)
@@ -224,9 +225,10 @@ class TestDataset(Dataset):
             image = Image.open(self.pic_list[idx]).convert('RGB')
         except IOError:
             raise IOError('Reading image %s failed.' % self.pic_list[idx])
+        resize = T.Resize((224, 224))
         to_tensor = T.ToTensor()
         normalize = T.Normalize(self.mean, self.std)
-        transform_compose = T.Compose([to_tensor, normalize])
+        transform_compose = T.Compose([resize, to_tensor, normalize])
         image = transform_compose(image)
 
         return image, sample_name
