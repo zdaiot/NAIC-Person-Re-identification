@@ -7,7 +7,7 @@ from torchvision import transforms as T
 from torch.utils.data import DataLoader, Dataset
 from dataset.transform import DataAugmentation
 from utils.visualize import image_with_mask_torch
-from utils.dataset_statics import get_folds_id
+from utils.dataset_statics import get_folds_id, get_all_id
 
 
 class TrainDataset(Dataset):
@@ -285,6 +285,27 @@ def get_loaders(root, n_splits, batch_size, num_works, shuffle_train, use_erase,
         num_classes_folds.append(len(train_id_fold))
         train_valid_ratio_folds.append(len(train_id_fold)/len(valid_id_fold))
     return train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds
+
+
+def get_baseline_loader(root, batch_size, num_works, shuffle_train, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
+    """ 获得训练集的Dataloader，以及总的类别数
+
+    :param root: 训练数据集的根目录；类型为str
+    :param batch_size: batch的大小；类型为int
+    :param num_works: 读取数据时的线程数；类型为int
+    :param shuffle_train: 是否打乱训练集；类型为bool
+    :param mean: 每个通道的均值；类型为tuple
+    :param std: 每个通道的方差；类型为tuple
+    :return train_dataloader: 训练集的Dataloader；
+    :return num_classes: 训练集的类别数；类型为int
+    """
+    train_list_path = os.path.join(root, 'train_list.txt')
+    root_pic = os.path.join(root, 'train_set')
+    train_id = get_all_id(train_list_path)
+    train_dataset = TrainDataset(root=root_pic, id_list=train_list_path, train_id=train_id, augmentation=None, mean=mean, std=std)
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_works, pin_memory=True, shuffle=shuffle_train)
+    num_classes = len(train_id)
+    return train_dataloader, num_classes
 
 
 if __name__ == "__main__":

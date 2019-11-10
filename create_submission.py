@@ -6,6 +6,8 @@ import codecs
 import numpy as np
 import tqdm
 from torch.utils.data import DataLoader
+import matplotlib.pyplot as plt
+from PIL import Image
 from dataset.NAIC_dataset import TestDataset, get_loaders
 from config import get_config
 from models.model import build_model
@@ -46,11 +48,11 @@ class CreateSubmission():
         self.num_choose = 200
 
         # 加载test Dataloader
-        pic_path_query = os.path.join(self.test_dataset_root, 'query_a')
-        pic_path_gallery = os.path.join(self.test_dataset_root, 'gallery_a')
+        self.pic_path_query = os.path.join(self.test_dataset_root, 'query_a')
+        self.pic_path_gallery = os.path.join(self.test_dataset_root, 'gallery_a')
 
-        pic_list_query = glob.glob(pic_path_query + '/*.png')
-        pic_list_gallery = glob.glob(pic_path_gallery + '/*.png')
+        pic_list_query = glob.glob(self.pic_path_query + '/*.png')
+        pic_list_gallery = glob.glob(self.pic_path_gallery + '/*.png')
 
         pic_list = pic_list_query + pic_list_gallery
 
@@ -60,7 +62,12 @@ class CreateSubmission():
         self.test_dataloader = DataLoader(test_dataset, batch_size=config.batch_size, num_workers=config.num_workers,
                                           pin_memory=True, shuffle=False)
 
-    def get_result(self):
+    def get_result(self, show):
+        """
+
+        :param show: 是否显示查询出的结果
+        :return None
+        """
         self.model.eval()
         tbar = tqdm.tqdm(self.test_dataloader)
         features_all, names_all = [], []
@@ -90,9 +97,32 @@ class CreateSubmission():
             query_name = query_names[query_index]
             gallery_name = gallery_names[choose_index]
             result[query_name] = gallery_name.tolist()
+            if show:
+                self.show_result(query_name, gallery_name, 5)
 
         with codecs.open('./result.json', 'w', "utf-8") as json_file:
             json.dump(result, json_file, ensure_ascii=False)
+
+    def show_result(self, query_name, gallery_names, top_rank):
+        """
+
+        :param query_name: 待查询样本的名称
+        :param gallery_names: 检索到的样本名称
+        :param top_rank: 显示检索到的前多少张图片
+        :return None
+        """
+        # 将索引转换为样本名称
+        query_image = Image.open(os.path.join(self.pic_path_query, query_name))
+        plt.figure()
+        plt.subplot(1, top_rank + 1, 1)
+        plt.imshow(query_image)
+        for i, gallery_name in enumerate(gallery_names):
+            if i == top_rank:
+                break
+            gallery_image = Image.open(os.path.join(self.pic_path_gallery, gallery_name))
+            plt.subplot(1, top_rank + 1, i + 1 + 1)
+            plt.imshow(gallery_image)
+        plt.show()
 
 
 if __name__ == "__main__":
@@ -109,5 +139,5 @@ if __name__ == "__main__":
             continue
         # 注意fold之间的因为类别数不同所以模型也不同，所以均要实例化TrainVal
         create_submission = CreateSubmission(config, num_classes, fold_index)
-        create_submission.get_result()
+        create_submission.get_result(show=True)
 

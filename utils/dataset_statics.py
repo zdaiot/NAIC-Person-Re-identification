@@ -59,6 +59,8 @@ def get_folds_id(train_list_path, n_splits):
             pass
         # elif value == 2:
         #     train_id_pin.append(key)
+        elif value > 100:
+            pass
         else:
             train_valid_id.append(key)
             train_valid_id_number.append(value)
@@ -73,6 +75,16 @@ def get_folds_id(train_list_path, n_splits):
         train_id_folds.append(train_id_fold)
         valid_id_folds.append(valid_id_fold)
     return train_id_folds, valid_id_folds
+
+
+def get_all_id(train_list_path):
+    """ 返回训练数据集的所有类别
+
+    :param train_list_path: 存储全部数据集对应的id的txt文件；类型为str
+    :return: 所有数据集的类别
+    """
+    id_numbers = dataset_statics(train_list_path)
+    return id_numbers.keys()
         
 
 if __name__ == '__main__':
