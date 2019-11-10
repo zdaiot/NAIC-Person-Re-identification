@@ -92,7 +92,6 @@ class DataAugmentation(object):
             mask_aug: 增强后的掩膜
         """
         augmentations = Compose([
-            Resize(224, 224),
             HorizontalFlip(p=0.4),
             ShiftScaleRotate(shift_limit=0.07, rotate_limit=0, p=0.4),
             # 直方图均衡化
