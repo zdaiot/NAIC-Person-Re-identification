@@ -20,7 +20,7 @@ from utils.custom_optim import make_optimizer, WarmupMultiStepLR
 from evaluate import euclidean_dist, eval_func, re_rank, cos_dist
 
 
-class TrainVal():
+class TrainVal(object):
     def __init__(self, config, num_query, num_classes, train_valid_ratio, fold):
         """
 

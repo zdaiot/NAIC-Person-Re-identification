@@ -16,7 +16,7 @@ from dataset.NAIC_dataset import get_baseline_loader
 from utils.set_seed import seed_torch
 
 
-class TrainBaseline():
+class TrainBaseline(object):
     def __init__(self, config, num_classes):
         """
 
