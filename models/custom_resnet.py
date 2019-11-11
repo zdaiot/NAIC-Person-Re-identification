@@ -1,7 +1,7 @@
 from torchvision import models
 import torch
 import torch.nn as nn
-from models.weights_init import weights_init_kaiming, weights_init_classifier
+from models.weights_init import weights_init_kaiming_another, weights_init_classifier_another
 
 
 class ClassBlock(nn.Module):
@@ -21,12 +21,12 @@ class ClassBlock(nn.Module):
         if droprate > 0:
             add_block += [nn.Dropout(p=droprate)]
         add_block = nn.Sequential(*add_block)
-        add_block.apply(weights_init_kaiming)
+        add_block.apply(weights_init_kaiming_another)
 
         classifier = []
         classifier += [nn.Linear(num_bottleneck, class_num)]
         classifier = nn.Sequential(*classifier)
-        classifier.apply(weights_init_classifier)
+        classifier.apply(weights_init_classifier_another)
 
         self.add_block = add_block
         self.classifier = classifier
