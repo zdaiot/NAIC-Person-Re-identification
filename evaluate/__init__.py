@@ -26,3 +26,8 @@ def re_rank(q, g):
     qg_dist = euclidean_dist(q, g).numpy()
     distmat = re_ranking(qg_dist, qq_dist, gg_dist)
     return distmat
+
+
+def mm_dist(query_features, gallery_features):
+    score = torch.mm(query_features, gallery_features.t())
+    return score.cpu().numpy()

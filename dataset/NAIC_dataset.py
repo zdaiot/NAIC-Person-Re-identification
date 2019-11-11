@@ -11,11 +11,11 @@ from utils.dataset_statics import get_folds_id, get_all_id
 
 
 class TrainDataset(Dataset):
-    def __init__(self, root, id_list, train_id, augmentation, mean, std):
+    def __init__(self, root, train_list_txt_path, train_id, augmentation, mean, std):
         """ 训练数据集的Dataset类
 
         :param root: 训练数据集的根目录；类型为str
-        :param id_list: 存储全部数据集对应的id的txt文件；类型为str
+        :param train_list_txt_path: 存储全部数据集对应的id的txt文件；类型为str
         :param train_id: 筛选用于训练集的id，类型为list
         :param augmentation: 对样本进行增强；类型为callable
         :param mean: 每个通道的均值；类型为tuple
@@ -23,7 +23,7 @@ class TrainDataset(Dataset):
         """
         super(TrainDataset, self).__init__()
         self.root = root
-        self.id_list = id_list
+        self.train_list_txt_path = train_list_txt_path
         self.train_id = train_id
         # 因为样本的id可能是不连续的，所以要将样本id映射为类标
         self.id_to_label = {id: label for label, id in enumerate(sorted(train_id))}
@@ -73,9 +73,9 @@ class TrainDataset(Dataset):
                              list中的每一个元素也为list，表示每一个样本，其第一个值为图片名，第二个值为label
         """
         samples_list = []
-        if not os.path.exists(self.id_list):
-            raise FileExistsError('Please ensure %s exists.' % self.id_list)
-        with open(self.id_list, 'r') as id_file:
+        if not os.path.exists(self.train_list_txt_path):
+            raise FileExistsError('Please ensure %s exists.' % self.train_list_txt_path)
+        with open(self.train_list_txt_path, 'r') as id_file:
             for sample in id_file.readlines():
                 sample_list = []
                 # 依据id进行样本筛选
@@ -137,15 +137,15 @@ class ValidateDataset(Dataset):
 
 
 class queryGallerySeparate():
-    def __init__(self, root, id_list, class_id):
+    def __init__(self, root, train_list_txt_path, class_id):
         """ 划分查询集与数据库
 
         :param root: 训练数据集的根目录；类型为str
-        :param id_list: 存储全部数据集对应的id的txt文件；类型为str
+        :param train_list_txt_path: 存储全部数据集对应的id的txt文件；类型为str
         :param class_id: 筛选用于训练集的id，类型为list
         """
         self.root = root
-        self.id_list = id_list
+        self.train_list_txt_path = train_list_txt_path
         self.class_id = class_id
         self.samples_list, self.labels_list = self.parse_id_list()
 
@@ -185,9 +185,9 @@ class queryGallerySeparate():
         """
         samples_list = []
         labels_list = []
-        if not os.path.exists(self.id_list):
-            raise FileExistsError('Please ensure %s exists.' % self.id_list)
-        with open(self.id_list, 'r') as id_file:
+        if not os.path.exists(self.train_list_txt_path):
+            raise FileExistsError('Please ensure %s exists.' % self.train_list_txt_path)
+        with open(self.train_list_txt_path, 'r') as id_file:
             for sample in id_file.readlines():
                 # 依据id进行样本筛选
                 sample_id = int(sample.split(' ')[1].strip('\n'))
@@ -256,18 +256,18 @@ def get_loaders(root, n_splits, batch_size, num_works, shuffle_train, use_erase,
     :return num_classes_folds: 所有折训练集的类别数；类型为int
     :return train_valid_ratio_folds：所有折训练集类别数与查询集类别数的比例
     """
-    train_list_path = os.path.join(root, 'train_list.txt')
+    train_list_txt_path = os.path.join(root, 'train_list.txt')
     root_pic = os.path.join(root, 'train_set')
     train_dataloader_folds, valid_dataloader_folds = list(), list()
     num_query_folds, num_classes_folds = list(), list()
     train_valid_ratio_folds = list()
     # 分层交叉验证
-    train_id_folds, valid_id_folds = get_folds_id(train_list_path, n_splits)
+    train_id_folds, valid_id_folds = get_folds_id(train_list_txt_path, n_splits)
     for train_id_fold, valid_id_fold in zip(train_id_folds, valid_id_folds):
-        train_dataset = TrainDataset(root=root_pic, id_list=train_list_path, train_id=train_id_fold,
+        train_dataset = TrainDataset(root=root_pic, train_list_txt_path=train_list_txt_path, train_id=train_id_fold,
                                      augmentation=DataAugmentation(erase_flag=use_erase), mean=mean, std=std)
 
-        query_gallery_separate = queryGallerySeparate(root=root_pic, id_list=train_list_path, class_id=valid_id_fold)
+        query_gallery_separate = queryGallerySeparate(root=root_pic, train_list_txt_path=train_list_txt_path, class_id=valid_id_fold)
         query_list, gallery_list, num_query = query_gallery_separate.query_gallery_separate()
         valid_dataset = ValidateDataset(root=root_pic, samples_list=query_list + gallery_list, mean=mean, std=std)
 
@@ -297,10 +297,10 @@ def get_baseline_loader(root, batch_size, num_works, shuffle_train, mean=(0.485,
     :return train_dataloader: 训练集的Dataloader；
     :return num_classes: 训练集的类别数；类型为int
     """
-    train_list_path = os.path.join(root, 'train_list.txt')
+    train_list_txt_path = os.path.join(root, 'train_list.txt')
     root_pic = os.path.join(root, 'train_set')
-    train_id = get_all_id(train_list_path)
-    train_dataset = TrainDataset(root=root_pic, id_list=train_list_path, train_id=train_id, augmentation=None, mean=mean, std=std)
+    train_id = get_all_id(train_list_txt_path)
+    train_dataset = TrainDataset(root=root_pic, train_list_txt_path=train_list_txt_path, train_id=train_id, augmentation=None, mean=mean, std=std)
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_works, pin_memory=True, shuffle=shuffle_train)
     num_classes = len(train_id)
     return train_dataloader, num_classes

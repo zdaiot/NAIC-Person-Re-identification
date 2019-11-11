@@ -10,9 +10,9 @@ import matplotlib.pyplot as plt
 from PIL import Image
 from dataset.NAIC_dataset import TestDataset, get_loaders, get_baseline_loader
 from config import get_config
-from models.model import build_model
+from models.model import build_model, get_model
 from models.sync_bn.batchnorm import convert_model
-from evaluate import euclidean_dist, re_rank
+from evaluate import euclidean_dist, re_rank, mm_dist
 from solver import Solver
 
 
@@ -34,7 +34,7 @@ class CreateSubmission():
         print('Using {} GPUS'.format(self.num_gpus))
 
         # 加载模型，只要有GPU，则使用DataParallel函数，当GPU有多个GPU时，调用sync_bn函数
-        self.model = build_model(self.model_name, self.num_classes, self.last_stride)
+        self.model = get_model(self.model_name, self.num_classes, self.last_stride)
         if torch.cuda.is_available():
             self.model = torch.nn.DataParallel(self.model)
             if self.num_gpus > 1:
@@ -46,7 +46,7 @@ class CreateSubmission():
         self.solver = Solver(self.model, self.device)
 
         # 加载权重矩阵
-        self.solver.load_checkpoint(pth_path)
+        self.model = self.solver.load_checkpoint(pth_path)
 
         # 每一个查询样本从数据库中取出最近的10个样本
         self.num_choose = 200
@@ -93,11 +93,13 @@ class CreateSubmission():
         if self.rerank:
             distmat = re_rank(query_features, gallery_features)
         else:
-            distmat = euclidean_dist(query_features, gallery_features)
+            # distmat = euclidean_dist(query_features, gallery_features)
+            distmat = mm_dist(query_features, gallery_features)
 
         result = {}
         for query_index, query_dist in enumerate(distmat):
-            choose_index = np.argsort(query_dist)[:self.num_choose]
+            # 注意若使用的是mm_dist需要从大到小将序排列（加负号），其余为从小到大升序排列（不加负号）
+            choose_index = np.argsort(-query_dist)[:self.num_choose]
             query_name = query_names[query_index]
             gallery_name = gallery_names[choose_index]
             result[query_name] = gallery_name.tolist()
@@ -142,7 +144,7 @@ if __name__ == "__main__":
                                                         config.shuffle_train, mean, std)
         pth_path = os.path.join(config.save_path, config.model_name, '{}.pth'.format(config.model_name))
         create_submission = CreateSubmission(config, num_classes, pth_path)
-        create_submission.get_result(show=False)
+        create_submission.get_result(show=True)
     else:
         # 测试加了各种trick的模型
         train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds = get_loaders(
