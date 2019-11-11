@@ -34,6 +34,7 @@ class TrainBaseline():
         self.cython = config.cython
         self.num_gpus = torch.cuda.device_count()
         print('Using {} GPUS'.format(self.num_gpus))
+        print('NUM_CLASS: {}'.format(self.num_classes))
         if self.cython:
             print('USE CYTHON TO EVAL!')
 

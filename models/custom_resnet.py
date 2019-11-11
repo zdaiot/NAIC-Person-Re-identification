@@ -99,7 +99,7 @@ class CustomResnet(nn.Module):
         global_features = global_features.view(global_features.shape[0], -1)
         # features = self.bottleneck(global_features)
         # scores = self.fc(features)
-        features, scores = self.classifier(global_features)
+        scores, features = self.classifier(global_features)
         return scores, global_features, features
 
 
