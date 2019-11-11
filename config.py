@@ -14,7 +14,7 @@ def get_config():
         parser = argparse.ArgumentParser()
         # model hyper-parameters
         parser.add_argument('--batch_size', type=int, default=64, help='batch size')
-        parser.add_argument('--epoch', type=int, default=100, help='epoch')
+        parser.add_argument('--epoch', type=int, default=60, help='epoch')
         parser.add_argument('--num_workers', type=int, default=8)
         parser.add_argument('--selected_fold', type=list, default=[0], help='what folds for training?')
 

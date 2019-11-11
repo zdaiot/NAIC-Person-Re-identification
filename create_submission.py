@@ -8,7 +8,7 @@ import tqdm
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 from PIL import Image
-from dataset.NAIC_dataset import TestDataset, get_loaders
+from dataset.NAIC_dataset import TestDataset, get_loaders, get_baseline_loader
 from config import get_config
 from models.model import build_model
 from models.sync_bn.batchnorm import convert_model
@@ -17,9 +17,14 @@ from solver import Solver
 
 
 class CreateSubmission():
-    def __init__(self, config, num_classes, fold):
+    def __init__(self, config, num_classes, pth_path):
+        """
+
+        :param config: 配置参数
+        :param num_classes: 类别数；类型为int
+        :param pth_path: 权重文件路径；类型为str
+        """
         self.num_classes = num_classes
-        self.fold = fold
 
         self.model_name = config.model_name
         self.last_stride = config.last_stride
@@ -41,8 +46,7 @@ class CreateSubmission():
         self.solver = Solver(self.model, self.device)
 
         # 加载权重矩阵
-        self.model_path = os.path.join(config.save_path, config.model_name)
-        self.solver.load_checkpoint(os.path.join(self.model_path, '{}_fold{}_best.pth'.format(self.model_name, self.fold)))
+        self.solver.load_checkpoint(pth_path)
 
         # 每一个查询样本从数据库中取出最近的10个样本
         self.num_choose = 200
@@ -126,18 +130,30 @@ class CreateSubmission():
 
 
 if __name__ == "__main__":
+    test_baseline = True
     config = get_config()
     mean = (0.485, 0.456, 0.406)
     std = (0.229, 0.224, 0.225)
     train_dataset_root = os.path.join(config.dataset_root, '初赛训练集')
-    train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds = get_loaders(
-        train_dataset_root, config.n_splits, config.batch_size, config.num_workers, config.shuffle_train, config.use_erase, mean, std)
 
-    for fold_index, [train_loader, valid_loader, num_query, num_classes] in enumerate(zip(train_dataloader_folds,
-                                                  valid_dataloader_folds, num_query_folds, num_classes_folds)):
-        if fold_index not in config.selected_fold:
-            continue
-        # 注意fold之间的因为类别数不同所以模型也不同，所以均要实例化TrainVal
-        create_submission = CreateSubmission(config, num_classes, fold_index)
-        create_submission.get_result(show=True)
+    if test_baseline:
+        # 测试baseline
+        train_loader, num_classes = get_baseline_loader(train_dataset_root, config.batch_size, config.num_workers,
+                                                        config.shuffle_train, mean, std)
+        pth_path = os.path.join(config.save_path, config.model_name, '{}.pth'.format(config.model_name))
+        create_submission = CreateSubmission(config, num_classes, pth_path)
+        create_submission.get_result(show=False)
+    else:
+        # 测试加了各种trick的模型
+        train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds = get_loaders(
+            train_dataset_root, config.n_splits, config.batch_size, config.num_workers, config.shuffle_train, config.use_erase, mean, std)
+
+        for fold_index, [train_loader, valid_loader, num_query, num_classes] in enumerate(zip(train_dataloader_folds,
+                                                      valid_dataloader_folds, num_query_folds, num_classes_folds)):
+            if fold_index not in config.selected_fold:
+                continue
+            pth_path = os.path.join(config.save_path, config.model_name, '{}_fold{}_best.pth'.format(config.model_name, fold_index))
+            # 注意fold之间的因为类别数不同所以模型也不同，所以均要实例化TrainVal
+            create_submission = CreateSubmission(config, num_classes, pth_path)
+            create_submission.get_result(show=True)
 

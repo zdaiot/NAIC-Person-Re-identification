@@ -11,7 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from config import get_config
 from solver import Solver
-from models.model import build_model
+from models.model import build_model, get_model
 from dataset.NAIC_dataset import get_baseline_loader
 from utils.set_seed import seed_torch
 
@@ -38,7 +38,7 @@ class TrainBaseline():
             print('USE CYTHON TO EVAL!')
 
         # 加载模型，只要有GPU，则使用DataParallel函数，当GPU有多个GPU时，调用sync_bn函数
-        self.model = build_model(self.model_name, self.num_classes, self.last_stride)
+        self.model = get_model(self.model_name, self.num_classes, self.last_stride)
         if torch.cuda.is_available():
             self.model = torch.nn.DataParallel(self.model)
             self.model = self.model.cuda()

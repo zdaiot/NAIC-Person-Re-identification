@@ -60,3 +60,10 @@ class Baseline(nn.Module):
         cls_score = self.classifier(features)
         return cls_score, global_features, features  # global feature for triplet loss
 
+
+if __name__ == '__main__':
+    inputs = torch.rand((64, 3, 256, 128))
+    model = Baseline(num_classes=2000, last_stride=1, model_path='dataset/NAIC_data/resnet50-19c8e357.pth')
+    scores, global_features, features = model(inputs)
+    print(scores.size(), global_features.size(), features.size())
+
