@@ -4,7 +4,7 @@ import torch
 
 
 def euclidean_dist(x, y):
-    """
+    """ 计算欧式距离
     Args:
       x: pytorch Variable, with shape [m, d]
       y: pytorch Variable, with shape [n, d]
@@ -17,7 +17,7 @@ def euclidean_dist(x, y):
     dist = xx + yy
     dist.addmm_(1, -2, x, y.t())
     dist = dist.clamp(min=1e-12).sqrt()  # for numerical stability
-    return dist
+    return dist.numpy()
 
 
 def re_rank(q, g):
@@ -28,6 +28,18 @@ def re_rank(q, g):
     return distmat
 
 
-def mm_dist(query_features, gallery_features):
+def cos_dist(query_features, gallery_features):
+    """ 计算余弦距离
+
+    :param query_features:
+    :param gallery_features:
+    :return:
+    """
+    qnorm = torch.norm(query_features, p=2, dim=1, keepdim=True)
+    query_features = query_features.div(qnorm.expand_as(query_features))
+
+    gnorm = torch.norm(gallery_features, p=2, dim=1, keepdim=True)
+    gallery_features = gallery_features.div(gnorm.expand_as(gallery_features))
+
     score = torch.mm(query_features, gallery_features.t())
     return score.cpu().numpy()

@@ -61,7 +61,8 @@ def get_config():
 
         # 其他设置
         parser.add_argument('--cython', type=bool, default=True, help='use cython or python to eval')
-        parser.add_argument('--rerank', type=bool, default=False, help='use rerank or not')
+        parser.add_argument('--dist', type=str, default='cos_dist',
+                            help='How to measure similarity, cos_dist/re_rank/euclidean_dist')
 
         config = parser.parse_args()
         # config = {k: v for k, v in args._get_kwargs()}

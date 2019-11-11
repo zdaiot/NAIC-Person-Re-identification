@@ -12,7 +12,7 @@ from dataset.NAIC_dataset import TestDataset, get_loaders, get_baseline_loader
 from config import get_config
 from models.model import build_model, get_model
 from models.sync_bn.batchnorm import convert_model
-from evaluate import euclidean_dist, re_rank, mm_dist
+from evaluate import euclidean_dist, re_rank, cos_dist
 from solver import Solver
 
 
@@ -29,7 +29,7 @@ class CreateSubmission():
         self.model_name = config.model_name
         self.last_stride = config.last_stride
         self.test_dataset_root = os.path.join(config.dataset_root, '初赛A榜测试集')
-        self.rerank = config.rerank
+        self.dist = config.dist
         self.num_gpus = torch.cuda.device_count()
         print('Using {} GPUS'.format(self.num_gpus))
 
@@ -90,16 +90,22 @@ class CreateSubmission():
         query_names = np.array(names_all[:self.num_query])
         gallery_names = np.array(names_all[self.num_query:])
 
-        if self.rerank:
+        if self.dist == 're_rank':
             distmat = re_rank(query_features, gallery_features)
+        elif self.dist == 'cos_dist':
+            distmat = cos_dist(query_features, gallery_features)
+        elif self.dist == 'euclidean_dist':
+            distmat = euclidean_dist(query_features, gallery_features)
         else:
-            # distmat = euclidean_dist(query_features, gallery_features)
-            distmat = mm_dist(query_features, gallery_features)
+            assert "Not implemented :{}".format(self.dist)
 
         result = {}
         for query_index, query_dist in enumerate(distmat):
-            # 注意若使用的是mm_dist需要从大到小将序排列（加负号），其余为从小到大升序排列（不加负号）
-            choose_index = np.argsort(-query_dist)[:self.num_choose]
+            # 注意若使用的是cos_dist需要从大到小将序排列（加负号），其余为从小到大升序排列（不加负号）
+            if self.dist == 'cos_dist':
+                choose_index = np.argsort(-query_dist)[:self.num_choose]
+            else:
+                choose_index = np.argsort(query_dist)[:self.num_choose]
             query_name = query_names[query_index]
             gallery_name = gallery_names[choose_index]
             result[query_name] = gallery_name.tolist()
