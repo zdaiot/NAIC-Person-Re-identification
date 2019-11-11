@@ -30,13 +30,9 @@ class TrainBaseline(object):
 
         self.model_name = config.model_name
         self.last_stride = config.last_stride
-        self.rerank = config.rerank
-        self.cython = config.cython
         self.num_gpus = torch.cuda.device_count()
         print('Using {} GPUS'.format(self.num_gpus))
         print('NUM_CLASS: {}'.format(self.num_classes))
-        if self.cython:
-            print('USE CYTHON TO EVAL!')
 
         # 加载模型，只要有GPU，则使用DataParallel函数，当GPU有多个GPU时，调用sync_bn函数
         self.model = get_model(self.model_name, self.num_classes, self.last_stride)
