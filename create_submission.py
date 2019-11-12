@@ -16,7 +16,7 @@ from evaluate import euclidean_dist, re_rank, cos_dist
 from solver import Solver
 
 
-class CreateSubmission():
+class CreateSubmission(object):
     def __init__(self, config, num_classes, pth_path):
         """
 
@@ -66,6 +66,8 @@ class CreateSubmission():
         self.test_dataloader = DataLoader(test_dataset, batch_size=config.batch_size, num_workers=config.num_workers,
                                           pin_memory=True, shuffle=False)
 
+        self.demo_names = os.listdir('dataset/demo_data')
+
     def get_result(self, show):
         """
 
@@ -109,7 +111,7 @@ class CreateSubmission():
             query_name = query_names[query_index]
             gallery_name = gallery_names[choose_index]
             result[query_name] = gallery_name.tolist()
-            if show:
+            if show and query_name in self.demo_names:
                 self.show_result(query_name, gallery_name, 5)
 
         with codecs.open('./result.json', 'w', "utf-8") as json_file:
@@ -134,6 +136,8 @@ class CreateSubmission():
             gallery_image = Image.open(os.path.join(self.pic_path_gallery, gallery_name))
             plt.subplot(1, top_rank + 1, i + 1 + 1)
             plt.imshow(gallery_image)
+        figManager = plt.get_current_fig_manager()
+        figManager.window.showMaximized()
         plt.show()
 
 
