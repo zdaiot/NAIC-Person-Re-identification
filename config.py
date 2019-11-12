@@ -44,7 +44,7 @@ def get_config():
         parser.add_argument('--momentum_SGD', type=float, default=0.9, help='momentum in SGD')
         parser.add_argument('--base_lr', type=float, default=5e-2, help='init lr')
         parser.add_argument('--bias_lr_factor', type=float, default=1, help='')
-        parser.add_argument('--weight_decay', type=float, default=5e-4, help='weight_decay in optimizer')
+        parser.add_argument('--weight_decay', type=float, default=5e-5, help='weight_decay in optimizer')
         parser.add_argument('--weight_decay_bias', type=float, default=0.0, help='')
 
         # 设置WarmupMultiStepLR

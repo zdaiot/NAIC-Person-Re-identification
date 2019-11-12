@@ -116,7 +116,7 @@ class TrainBaseline(object):
             epoch_loss = epoch_loss / images_number
             epoch_acc = epoch_corrects / images_number
             self.writer.add_scalar('lr', self.scheduler.get_lr()[0], epoch)
-            self.writer.add_scalar('train_loss_epoch', epoch_loss)
+            self.writer.add_scalar('train_loss_epoch', epoch_loss, epoch)
             self.writer.add_scalar('train_acc_epoch', epoch_acc * 100, epoch)
 
             # Print the log info
