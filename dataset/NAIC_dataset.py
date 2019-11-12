@@ -51,9 +51,16 @@ class TrainDataset(Dataset):
             image = np.array(image)
             image = self.augmentation(image)
             image = Image.fromarray(image)
-        to_tensor = T.ToTensor()
-        normalize = T.Normalize(self.mean, self.std)
-        transform_compose = T.Compose([to_tensor, normalize])
+
+        transform_train_list = [
+            T.Resize((256, 128), interpolation=3),
+            T.Pad(10),
+            T.RandomCrop((256, 128)),
+            T.RandomHorizontalFlip(),
+            T.ToTensor(),
+            T.Normalize(self.mean, self.std)
+        ]
+        transform_compose = T.Compose(transform_train_list)
         image = transform_compose(image)
 
         sample_label = torch.tensor(sample_label).long()

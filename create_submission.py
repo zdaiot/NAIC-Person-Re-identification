@@ -142,10 +142,10 @@ class CreateSubmission(object):
             plt.subplot(1, top_rank + 1, i + 1 + 1)
             plt.imshow(gallery_image)
             plt.text(30, -10.0, gallery_name)
-        figManager = plt.get_current_fig_manager()
-        figManager.window.showMaximized()
         plt.savefig(os.path.join(self.demo_results_path, query_name))
         if show:
+            figManager = plt.get_current_fig_manager()
+            figManager.window.showMaximized()
             plt.show()
 
 
