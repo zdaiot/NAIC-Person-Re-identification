@@ -9,3 +9,4 @@ checkpoints/
 .fuse_hidde*
 *.so
 evaluate/eval_cylib/eval_metrics_cy.c
+results/

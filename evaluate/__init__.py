@@ -32,9 +32,9 @@ def cos_dist(query_features, gallery_features):
     """ 计算余弦距离，相似性范围从-1到1：-1意味着两个向量指向的方向正好截然相反，1表示它们的指向是完全相同的，
     0通常表示它们之间是独立的，而在这之间的值则表示中间的相似性或相异性。
 
-    :param query_features:
-    :param gallery_features:
-    :return:
+    :param query_features: 查询样本集的features；类型为tensor；维度为[num_query, feature_dim]
+    :param gallery_features: 数据库的features；类型为tensor；维度为[num_gallery, feature_dim]
+    :return 查询集与数据库两两样本之间的余弦距离
     """
     qnorm = torch.norm(query_features, p=2, dim=1, keepdim=True)
     query_features = query_features.div(qnorm.expand_as(query_features))

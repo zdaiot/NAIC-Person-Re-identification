@@ -52,7 +52,7 @@ class TrainBaseline(object):
 
         # 加载优化函数以及学习率衰减策略
         self.optim = optim.Adam(self.model.module.parameters(), config.base_lr, weight_decay=config.weight_decay)
-        self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optim, self.epoch+10)
+        self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optim, self.epoch + 10)
 
         # 创建保存权重的路径
         self.model_path = os.path.join(config.save_path, config.model_name)
@@ -83,25 +83,26 @@ class TrainBaseline(object):
 
         for epoch in range(self.epoch):
             epoch += 1
-            epoch_loss = 0
             self.model.train()
-
+            images_number, epoch_corrects, epoch_loss = 0, 0, 0
             tbar = tqdm.tqdm(train_loader)
             for i, (images, labels) in enumerate(tbar):
                 # 网络的前向传播与反向传播
                 labels_predict, global_features, _ = self.solver.forward(images)
                 loss = self.criterion(labels_predict, labels.to(self.device))
-                epoch_loss += loss.item()
                 self.solver.backword(self.optim, loss)
 
-                train_acc = (labels_predict.max(1)[1] == labels.to(self.device)).float().mean()
+                epoch_loss += loss.item() * images.size(0)
+                images_number += images.size(0)
+                epoch_corrects += (labels_predict.max(1)[1] == labels.to(self.device)).float().sum()
+                train_acc_iteration = (labels_predict.max(1)[1] == labels.to(self.device)).float().mean()
 
                 # 保存到tensorboard，每一步存储一个
-                self.writer.add_scalar('train_loss', loss.item(), global_step + i)
-                self.writer.add_scalar('train_acc', train_acc, global_step + i)
+                self.writer.add_scalar('train_loss_iteration', loss.item(), global_step + i)
+                self.writer.add_scalar('train_acc_iteration', train_acc_iteration.item() * 100, global_step + i)
 
                 descript = "Train Loss: %.7f, Train Acc :%.2f, Lr :%.7f" % (loss.item(),
-                                                                            train_acc.item() * 100,
+                                                                            train_acc_iteration.item() * 100,
                                                                             self.scheduler.get_lr()[0])
                 tbar.set_description(desc=descript)
 
@@ -109,8 +110,16 @@ class TrainBaseline(object):
             self.scheduler.step()
             global_step += len(train_loader)
 
+            epoch_loss = epoch_loss / images_number
+            epoch_acc = epoch_corrects / images_number
+            self.writer.add_scalar('lr', self.scheduler.get_lr()[0], epoch)
+            self.writer.add_scalar('train_loss_epoch', epoch_loss)
+            self.writer.add_scalar('train_acc_epoch', epoch_acc * 100, epoch)
+
             # Print the log info
-            print('Finish Epoch [%d/%d], Average Loss: %.7f' % (epoch, self.epoch, epoch_loss / len(tbar)))
+            print('Finish Epoch [%d/%d], Average Loss: %.7f, Average Acc: %.2f' % (epoch, self.epoch,
+                                                                                   epoch_loss,
+                                                                                   epoch_acc * 100))
             state = {
                 'epoch': epoch,
                 'state_dict': self.model.module.state_dict(),
@@ -118,7 +127,6 @@ class TrainBaseline(object):
 
             self.solver.save_checkpoint(
                 os.path.join(self.model_path, '{}.pth'.format(self.model_name)), state, False)
-            self.writer.add_scalar('lr', self.scheduler.get_lr()[0], epoch)
 
 
 if __name__ == "__main__":
@@ -126,6 +134,7 @@ if __name__ == "__main__":
     mean = (0.485, 0.456, 0.406)
     std = (0.229, 0.224, 0.225)
     train_dataset_root = os.path.join(config.dataset_root, '初赛训练集')
-    train_loader, num_classes = get_baseline_loader(train_dataset_root, config.batch_size, config.num_workers, config.shuffle_train, mean, std)
+    train_loader, num_classes = get_baseline_loader(train_dataset_root, config.batch_size, config.num_workers,
+                                                    config.shuffle_train, mean, std)
     train_baseline = TrainBaseline(config, num_classes)
     train_baseline.train(train_loader)

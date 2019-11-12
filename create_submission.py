@@ -67,6 +67,9 @@ class CreateSubmission(object):
                                           pin_memory=True, shuffle=False)
 
         self.demo_names = os.listdir('dataset/demo_data')
+        self.demo_results_path = './results'
+        if not os.path.exists(self.demo_results_path):
+            os.makedirs(self.demo_results_path)
 
     def get_result(self, show):
         """
@@ -111,34 +114,39 @@ class CreateSubmission(object):
             query_name = query_names[query_index]
             gallery_name = gallery_names[choose_index]
             result[query_name] = gallery_name.tolist()
-            if show and query_name in self.demo_names:
-                self.show_result(query_name, gallery_name, 5)
+            if query_name in self.demo_names:
+                self.show_result(query_name, gallery_name, 5, show)
 
         with codecs.open('./result.json', 'w', "utf-8") as json_file:
             json.dump(result, json_file, ensure_ascii=False)
 
-    def show_result(self, query_name, gallery_names, top_rank):
+    def show_result(self, query_name, gallery_names, top_rank, show):
         """
 
-        :param query_name: 待查询样本的名称
-        :param gallery_names: 检索到的样本名称
-        :param top_rank: 显示检索到的前多少张图片
+        :param query_name: 待查询样本的名称；类型为str
+        :param gallery_names: 检索到的样本名称；类型为list
+        :param top_rank: 显示检索到的前多少张图片；类型为int
+        :param show: 是否显示结果；类型为bool
         :return None
         """
         # 将索引转换为样本名称
         query_image = Image.open(os.path.join(self.pic_path_query, query_name))
-        plt.figure()
+        plt.figure(figsize=(14, 10))
         plt.subplot(1, top_rank + 1, 1)
         plt.imshow(query_image)
+        plt.text(30, -10.0, query_name)
         for i, gallery_name in enumerate(gallery_names):
             if i == top_rank:
                 break
             gallery_image = Image.open(os.path.join(self.pic_path_gallery, gallery_name))
             plt.subplot(1, top_rank + 1, i + 1 + 1)
             plt.imshow(gallery_image)
+            plt.text(30, -10.0, gallery_name)
         figManager = plt.get_current_fig_manager()
         figManager.window.showMaximized()
-        plt.show()
+        plt.savefig(os.path.join(self.demo_results_path, query_name))
+        if show:
+            plt.show()
 
 
 if __name__ == "__main__":
@@ -154,7 +162,7 @@ if __name__ == "__main__":
                                                         config.shuffle_train, mean, std)
         pth_path = os.path.join(config.save_path, config.model_name, '{}.pth'.format(config.model_name))
         create_submission = CreateSubmission(config, num_classes, pth_path)
-        create_submission.get_result(show=True)
+        create_submission.get_result(show=False)
     else:
         # 测试加了各种trick的模型
         train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds = get_loaders(
