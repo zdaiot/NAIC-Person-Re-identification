@@ -51,7 +51,10 @@ class TrainBaseline(object):
         self.criterion = torch.nn.CrossEntropyLoss()
 
         # 加载优化函数以及学习率衰减策略
-        self.optim = optim.Adam(self.model.module.parameters(), config.base_lr, weight_decay=config.weight_decay)
+        # self.optim = optim.Adam(self.model.module.parameters(), config.base_lr, weight_decay=config.weight_decay)
+        self.optim = optim.Adam([{'params': self.model.module.resnet_layer.parameters(), 'lr': config.base_lr*0.1},
+                                {'params': self.model.module.classifier.parameters(), 'lr': config.base_lr}],
+                                weight_decay=config.weight_decay)
         self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optim, self.epoch + 10)
 
         # 创建保存权重的路径
