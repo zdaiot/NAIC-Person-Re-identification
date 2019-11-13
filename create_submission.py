@@ -47,6 +47,7 @@ class CreateSubmission(object):
 
         # 加载权重矩阵
         self.model = self.solver.load_checkpoint(pth_path)
+        self.model.eval()
 
         # 每一个查询样本从数据库中取出最近的10个样本
         self.num_choose = 200
@@ -77,7 +78,6 @@ class CreateSubmission(object):
         :param show: 是否显示查询出的结果
         :return None
         """
-        self.model.eval()
         tbar = tqdm.tqdm(self.test_dataloader)
         features_all, names_all = [], []
         with torch.no_grad():
@@ -148,6 +148,7 @@ class CreateSubmission(object):
             figManager = plt.get_current_fig_manager()
             figManager.window.showMaximized()
             plt.show()
+        plt.close()
 
 
 if __name__ == "__main__":

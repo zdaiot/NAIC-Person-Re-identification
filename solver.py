@@ -46,9 +46,9 @@ class Solver():
 
         preds = pred_origin + pred_hflip
         # 求平均
-        pred = preds / 2.0
+        # preds = preds / 2.0
 
-        return pred
+        return preds
 
     def cal_loss(self, predicts, features, targets, criterion):
         """ 根据真实类标和预测出的类标计算损失

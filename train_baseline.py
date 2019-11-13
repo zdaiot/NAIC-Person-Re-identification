@@ -52,9 +52,12 @@ class TrainBaseline(object):
 
         # 加载优化函数以及学习率衰减策略
         # self.optim = optim.Adam(self.model.module.parameters(), config.base_lr, weight_decay=config.weight_decay)
-        self.optim = optim.Adam([{'params': self.model.module.resnet_layer.parameters(), 'lr': config.base_lr*0.1},
+        # self.optim = optim.Adam([{'params': self.model.module.resnet_layer.parameters(), 'lr': config.base_lr*0.1},
+        #                         {'params': self.model.module.classifier.parameters(), 'lr': config.base_lr}],
+        #                         weight_decay=config.weight_decay)
+        self.optim = optim.SGD([{'params': self.model.module.resnet_layer.parameters(), 'lr': config.base_lr*0.1},
                                 {'params': self.model.module.classifier.parameters(), 'lr': config.base_lr}],
-                                weight_decay=config.weight_decay)
+                                weight_decay=config.weight_decay, momentum=config.momentum_SGD, nesterov=True)
         self.scheduler = optim.lr_scheduler.StepLR(self.optim, step_size=40, gamma=0.1)
         # self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optim, self.epoch + 10)
 
