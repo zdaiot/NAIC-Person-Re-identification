@@ -55,7 +55,8 @@ class TrainBaseline(object):
         self.optim = optim.Adam([{'params': self.model.module.resnet_layer.parameters(), 'lr': config.base_lr*0.1},
                                 {'params': self.model.module.classifier.parameters(), 'lr': config.base_lr}],
                                 weight_decay=config.weight_decay)
-        self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optim, self.epoch + 10)
+        self.scheduler = optim.lr_scheduler.StepLR(self.optim, step_size=40, gamma=0.1)
+        # self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optim, self.epoch + 10)
 
         # 创建保存权重的路径
         self.model_path = os.path.join(config.save_path, config.model_name)

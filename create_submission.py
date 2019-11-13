@@ -83,7 +83,8 @@ class CreateSubmission(object):
         with torch.no_grad():
             for i, (images, names) in enumerate(tbar):
                 # 完成网络的前向传播
-                labels_predict, global_features, features = self.solver.forward(images)
+                # labels_predict, global_features, features = self.solver.forward(images)
+                features = self.solver.tta(images)
 
                 features_all.append(features.detach().cpu())
                 names_all.extend(names)
