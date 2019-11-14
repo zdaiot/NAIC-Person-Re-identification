@@ -20,7 +20,8 @@ def get_config():
         parser.add_argument('--selected_fold', type=list, default=[0], help='what folds for training?')
 
         # dataset set
-        parser.add_argument('--augmentation_flag', type=bool, default=False, help='if true, use augmentation method in train set')
+        parser.add_argument('--augmentation_flag', type=bool, default=False,
+                            help='if true, use augmentation method in train set')
         parser.add_argument('--n_splits', type=int, default=4, help='n_splits_fold')
         parser.add_argument('--use_erase', type=bool, default=True, help='use erase or not in DataAugmentation')
 

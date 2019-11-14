@@ -14,14 +14,14 @@ from evaluate import euclidean_dist, re_rank, cos_dist
 from solver import Solver
 
 
-class CreateSubmission(object):
-    def __init__(self, config, num_classes, pth_path, test_dataloader, num_query):
+class Demo(object):
+    def __init__(self, config, num_classes, pth_path, valid_dataloader, num_query):
         """
 
         :param config: 配置参数
         :param num_classes: 类别数；类型为int
         :param pth_path: 权重文件路径；类型为str
-        :param test_dataloader: 测试数据集的Dataloader
+        :param valid_dataloader: 验证数据集的Dataloader
         :param num_query: 查询集数量；类型为int
         """
         self.num_classes = num_classes
@@ -49,15 +49,11 @@ class CreateSubmission(object):
         self.model.eval()
 
         # 每一个查询样本从数据库中取出最近的200个样本
-        self.num_choose = 200
+        self.num_choose = 10
         self.num_query = num_query
-        self.test_dataloader = test_dataloader
+        self.valid_dataloader = valid_dataloader
 
-        self.pic_path_query = os.path.join(config.dataset_root, '初赛A榜测试集', 'query_a')
-        self.pic_path_gallery = os.path.join(config.dataset_root, '初赛A榜测试集', 'gallery_a')
-
-        self.demo_names = os.listdir('dataset/demo_data')
-        self.demo_results_path = './results/test'
+        self.demo_results_path = './results/valid'
         if not os.path.exists(self.demo_results_path):
             os.makedirs(self.demo_results_path)
 
@@ -67,23 +63,27 @@ class CreateSubmission(object):
         :param show: 是否显示查询出的结果
         :return None
         """
-        tbar = tqdm.tqdm(self.test_dataloader)
-        features_all, names_all = [], []
+        tbar = tqdm.tqdm(self.valid_dataloader)
+        features_all, labels_all, paths_all = [], [], []
         with torch.no_grad():
-            for i, (images, names) in enumerate(tbar):
+            for i, (images, labels, paths) in enumerate(tbar):
                 # 完成网络的前向传播
                 # labels_predict, global_features, features = self.solver.forward(images)
                 features = self.solver.tta(images)
 
                 features_all.append(features.detach().cpu())
-                names_all.extend(names)
+                labels_all.extend(labels)
+                paths_all.extend(paths)
 
         features_all = torch.cat(features_all, dim=0)
         query_features = features_all[:self.num_query]
         gallery_features = features_all[self.num_query:]
 
-        query_names = np.array(names_all[:self.num_query])
-        gallery_names = np.array(names_all[self.num_query:])
+        query_lables = np.array(labels_all[:self.num_query])
+        gallery_labels = np.array(labels_all[self.num_query:])
+
+        query_paths = np.array(paths_all[:self.num_query])
+        gallery_paths = np.array(paths_all[self.num_query:])
 
         if self.dist == 're_rank':
             distmat = re_rank(query_features, gallery_features)
@@ -94,45 +94,45 @@ class CreateSubmission(object):
         else:
             assert "Not implemented :{}".format(self.dist)
 
-        result = {}
         for query_index, query_dist in enumerate(distmat):
             # 注意若使用的是cos_dist需要从大到小将序排列（加负号），其余为从小到大升序排列（不加负号）
             if self.dist == 'cos_dist':
                 choose_index = np.argsort(-query_dist)[:self.num_choose]
             else:
                 choose_index = np.argsort(query_dist)[:self.num_choose]
-            query_name = query_names[query_index]
-            gallery_name = gallery_names[choose_index]
-            result[query_name] = gallery_name.tolist()
-            if query_name in self.demo_names:
-                self.show_result(query_name, gallery_name, 5, show)
+            query_path = query_paths[query_index]
+            gallery_path = gallery_paths[choose_index]
+            query_label = query_lables[query_index]
+            gallery_label = gallery_labels[choose_index]
+            self.show_result(query_path, gallery_path, query_label, gallery_label, 5, show)
 
-        with codecs.open('./result.json', 'w', "utf-8") as json_file:
-            json.dump(result, json_file, ensure_ascii=False)
-
-    def show_result(self, query_name, gallery_names, top_rank, show):
+    def show_result(self, query_path, gallery_paths, query_label, gallery_labels, top_rank, show):
         """
 
-        :param query_name: 待查询样本的名称；类型为str
-        :param gallery_names: 检索到的样本名称；类型为list
+        :param query_path: 待查询样本的路径；类型为str
+        :param gallery_paths: 检索到的样本路径；类型为list
+        :param query_label: 待检索样本的类标；类型为int
+        :param gallery_labels: 检索到的样本类标；类型为list
         :param top_rank: 显示检索到的前多少张图片；类型为int
         :param show: 是否显示结果；类型为bool
         :return None
         """
         # 将索引转换为样本名称
-        query_image = Image.open(os.path.join(self.pic_path_query, query_name))
+        query_image = Image.open(query_path)
         plt.figure(figsize=(14, 10))
         plt.subplot(1, top_rank + 1, 1)
         plt.imshow(query_image)
-        plt.text(30, -10.0, query_name)
-        for i, gallery_name in enumerate(gallery_names):
+        plt.text(30, -10.0, query_path.split('/')[-1])
+        plt.text(30, -20.0, query_label)
+        for i, (gallery_path, gallery_label) in enumerate(zip(gallery_paths, gallery_labels)):
             if i == top_rank:
                 break
-            gallery_image = Image.open(os.path.join(self.pic_path_gallery, gallery_name))
+            gallery_image = Image.open(gallery_path)
             plt.subplot(1, top_rank + 1, i + 1 + 1)
             plt.imshow(gallery_image)
-            plt.text(30, -10.0, gallery_name)
-        plt.savefig(os.path.join(self.demo_results_path, query_name))
+            plt.text(30, -20.0, gallery_label)
+            plt.text(30, -10.0, gallery_path.split('/')[-1])
+        plt.savefig(os.path.join(self.demo_results_path, query_path.split('/')[-1]))
         if show:
             figManager = plt.get_current_fig_manager()
             figManager.window.showMaximized()
@@ -141,33 +141,27 @@ class CreateSubmission(object):
 
 
 if __name__ == "__main__":
-    test_baseline = False
+    demo_on_baseline =True
     config = get_config()
     mean = (0.485, 0.456, 0.406)
     std = (0.229, 0.224, 0.225)
     train_dataset_root = os.path.join(config.dataset_root, '初赛训练集')
 
-    test_dataloader, num_query = get_test_loader(os.path.join(config.dataset_root, '初赛A榜测试集'), config.batch_size, config.num_workers)
+    train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds = \
+        get_loaders(train_dataset_root, config.n_splits, config.batch_size, config.num_instances,
+                    config.num_workers, config.augmentation_flag, config.use_erase, mean, std)
 
-    if test_baseline:
-        # 测试baseline
-        train_loader, num_classes = get_baseline_loader(train_dataset_root, config.batch_size, config.num_workers,
-                                                        True, mean, std)
-        pth_path = os.path.join(config.save_path, config.model_name, '{}.pth'.format(config.model_name))
-        create_submission = CreateSubmission(config, num_classes, pth_path, test_dataloader, num_query)
-        create_submission.get_result(show=False)
-    else:
-        # 测试加了各种trick的模型
-        train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds = \
-            get_loaders(train_dataset_root, config.n_splits, config.batch_size, config.num_instances,
-                        config.num_workers, config.augmentation_flag, config.use_erase, mean, std)
-
-        for fold_index, [train_loader, valid_loader, num_query, num_classes] in enumerate(zip(train_dataloader_folds,
-                                                      valid_dataloader_folds, num_query_folds, num_classes_folds)):
-            if fold_index not in config.selected_fold:
-                continue
-            pth_path = os.path.join(config.save_path, config.model_name, '{}_fold{}_best.pth'.format(config.model_name, fold_index))
-            # 注意fold之间的因为类别数不同所以模型也不同，所以均要实例化TrainVal
-            create_submission = CreateSubmission(config, num_classes, pth_path, test_dataloader, num_query)
-            create_submission.get_result(show=True)
+    for fold_index, [train_loader, valid_loader, num_query, num_classes] in enumerate(zip(train_dataloader_folds,
+                                                  valid_dataloader_folds, num_query_folds, num_classes_folds)):
+        if fold_index not in config.selected_fold:
+            continue
+        pth_path = os.path.join(config.save_path, config.model_name, '{}_fold{}_best.pth'.format(config.model_name, fold_index))
+        # 注意fold之间的因为类别数不同所以模型也不同，所以均要实例化TrainVal
+        if demo_on_baseline:
+            _, num_classes = get_baseline_loader(train_dataset_root, config.batch_size, config.num_workers,
+                                                            True, mean, std)
+            pth_path = os.path.join(config.save_path, config.model_name,
+                                    '{}.pth'.format(config.model_name))
+        create_submission = Demo(config, num_classes, pth_path, valid_loader, num_query)
+        create_submission.get_result(show=True)
 

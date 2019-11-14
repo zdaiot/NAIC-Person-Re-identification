@@ -124,14 +124,14 @@ class ValidateDataset(Dataset):
         :param idx: 索引下标
         :return image: 该索引对应的图片
         :return sample_label: 该索引对应的类标
-        :return sample_name: 该索引对应的图片路径
+        :return sample_path: 该索引对应的图片路径
         """
-        sample_name = os.path.join(self.root, self.samples_list[idx][0])
+        sample_path = os.path.join(self.root, self.samples_list[idx][0])
         sample_label = self.samples_list[idx][1]
         try:
-            image = Image.open(sample_name).convert('RGB')
+            image = Image.open(sample_path).convert('RGB')
         except IOError:
-            raise IOError('Reading image %s failed.' % sample_name)
+            raise IOError('Reading image %s failed.' % sample_path)
         to_tensor = T.ToTensor()
         normalize = T.Normalize(self.mean, self.std)
         transform_compose = T.Compose([to_tensor, normalize])
@@ -139,7 +139,7 @@ class ValidateDataset(Dataset):
 
         sample_label = torch.tensor(sample_label)
 
-        return image, sample_label, sample_name
+        return image, sample_label, sample_path
 
     def __len__(self):
         """

@@ -62,7 +62,7 @@ class RandomIdentitySampler(Sampler):
             random.shuffle(idxs)
             batch_idxs = []
 
-            # 假设pid类中所有数据可以划分n个num_instances，batch_idxs_dict[pid]为长度为n的列表，类标中的每一个值为num_instances个下标
+            # 假设pid类中所有数据可以划分n个num_instances(多余的舍弃)，batch_idxs_dict[pid]为长度为n的列表，类标中的每一个值为num_instances个下标
             for idx in idxs:
                 batch_idxs.append(idx)
                 if len(batch_idxs) == self.num_instances:

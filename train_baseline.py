@@ -156,6 +156,6 @@ if __name__ == "__main__":
     std = (0.229, 0.224, 0.225)
     train_dataset_root = os.path.join(config.dataset_root, '初赛训练集')
     train_loader, num_classes = get_baseline_loader(train_dataset_root, config.batch_size, config.num_workers,
-                                                    config.shuffle_train, mean, std)
+                                                    True, mean, std)
     train_baseline = TrainBaseline(config, num_classes)
     train_baseline.train(train_loader)
