@@ -7,17 +7,19 @@ from torchvision import transforms as T
 from torch.utils.data import DataLoader, Dataset
 from dataset.transform import DataAugmentation
 from utils.visualize import image_with_mask_torch
+from dataset.triplet_sampler import RandomIdentitySampler
 from utils.dataset_statics import get_folds_id, get_all_id
 
 
 class TrainDataset(Dataset):
-    def __init__(self, root, train_list_txt_path, train_id, augmentation, mean, std):
+    def __init__(self, root, train_list_txt_path, train_id, augmentation_flag, use_erase, mean, std):
         """ 训练数据集的Dataset类
 
         :param root: 训练数据集的根目录；类型为str
         :param train_list_txt_path: 存储全部数据集对应的id的txt文件；类型为str
         :param train_id: 筛选用于训练集的id，类型为list
-        :param augmentation: 对样本进行增强；类型为callable
+        :param augmentation_flag: 是否对样本使用额外的数据增强；类型为bool
+        :param use_erase: 是否使用随机擦除；类型为bool
         :param mean: 每个通道的均值；类型为tuple
         :param std: 每个通道的方差；类型为tuple
         """
@@ -28,7 +30,10 @@ class TrainDataset(Dataset):
         # 因为样本的id可能是不连续的，所以要将样本id映射为类标
         self.id_to_label = {id: label for label, id in enumerate(sorted(train_id))}
         self.samples_list = self.parse_id_list()
-        self.augmentation = augmentation
+        if augmentation_flag:
+            self.augmentation = DataAugmentation(erase_flag=use_erase)
+        else:
+            self.augmentation = None
 
         self.mean = mean
         self.std = std
@@ -100,7 +105,7 @@ class ValidateDataset(Dataset):
     def __init__(self, root, samples_list, mean, std):
         """ 验证数据集的Dataset类
 
-        :param root: 训练数据集的根目录；类型为str
+        :param root: 验证数据集的根目录；类型为str
         :param samples_list: [[sample_name, label], [sample_name, label]]
         :param mean: 每个通道的均值；类型为tuple
         :param std: 每个通道的方差；类型为tuple
@@ -143,7 +148,7 @@ class ValidateDataset(Dataset):
         return len(self.samples_list)
 
 
-class queryGallerySeparate():
+class queryGallerySeparate:
     def __init__(self, root, train_list_txt_path, class_id):
         """ 划分查询集与数据库
 
@@ -246,14 +251,15 @@ class TestDataset(Dataset):
         return len(self.pic_list)
 
 
-def get_loaders(root, n_splits, batch_size, num_works, shuffle_train, use_erase, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
+def get_loaders(root, n_splits, batch_size, num_instances, num_works, augmentation_flag, use_erase, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
     """ 获得各个折的训练集、验证集的Dataloader，以及各个折的查询集个数
 
     :param root: 训练数据集的根目录；类型为str
     :param n_splits: 要划分多少折；类型为int
     :param batch_size: batch的大小；类型为int
+    :param num_instances: 每一类选取多少个数据；类型为int
     :param num_works: 读取数据时的线程数；类型为int
-    :param shuffle_train: 是否打乱训练集；类型为bool
+    :param augmentation_flag: 是否对训练集进行额外的数据增强；类型为bool
     :param use_erase: 是否在数据增强的时候使用erase；类型为bool
     :param mean: 每个通道的均值；类型为tuple
     :param std: 每个通道的方差；类型为tuple
@@ -272,14 +278,15 @@ def get_loaders(root, n_splits, batch_size, num_works, shuffle_train, use_erase,
     train_id_folds, valid_id_folds = get_folds_id(train_list_txt_path, n_splits)
     for train_id_fold, valid_id_fold in zip(train_id_folds, valid_id_folds):
         train_dataset = TrainDataset(root=root_pic, train_list_txt_path=train_list_txt_path, train_id=train_id_fold,
-                                     augmentation=DataAugmentation(erase_flag=use_erase), mean=mean, std=std)
+                                     augmentation_flag=augmentation_flag, use_erase=use_erase, mean=mean, std=std)
 
         query_gallery_separate = queryGallerySeparate(root=root_pic, train_list_txt_path=train_list_txt_path, class_id=valid_id_fold)
         query_list, gallery_list, num_query = query_gallery_separate.query_gallery_separate()
         valid_dataset = ValidateDataset(root=root_pic, samples_list=query_list + gallery_list, mean=mean, std=std)
 
-        train_dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_works,
-                                      pin_memory=True, shuffle=shuffle_train)
+        train_dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_works, pin_memory=True,
+                                sampler=RandomIdentitySampler(train_dataset.samples_list, batch_size, num_instances),
+                                      shuffle=False)
         # 注意可以根据num_query来划分出查询集和数据库
         valid_dataloader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_works,
                                       pin_memory=True, shuffle=False)
@@ -307,7 +314,8 @@ def get_baseline_loader(root, batch_size, num_works, shuffle_train, mean=(0.485,
     train_list_txt_path = os.path.join(root, 'train_list.txt')
     root_pic = os.path.join(root, 'train_set')
     train_id = get_all_id(train_list_txt_path)
-    train_dataset = TrainDataset(root=root_pic, train_list_txt_path=train_list_txt_path, train_id=train_id, augmentation=None, mean=mean, std=std)
+    train_dataset = TrainDataset(root=root_pic, train_list_txt_path=train_list_txt_path, train_id=train_id,
+                                 augmentation_flag=False, use_erase=False, mean=mean, std=std)
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_works, pin_memory=True, shuffle=shuffle_train)
     num_classes = len(train_id)
     return train_dataloader, num_classes
@@ -320,7 +328,7 @@ if __name__ == "__main__":
     n_splits = 3
 
     train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds = \
-        get_loaders(root, n_splits, batch_size=8, num_works=8, shuffle_train=True, use_erase=True)
+        get_loaders(root, n_splits, batch_size=8, num_instances=4, num_works=8, augmentation_flag=False, use_erase=False)
     for train_dataloader, valid_dataloader, num_query, num_classes in zip(train_dataloader_folds,
                                                                           valid_dataloader_folds, num_query_folds,
                                                                           num_classes_folds):

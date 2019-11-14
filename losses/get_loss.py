@@ -12,7 +12,7 @@ def get_loss(selected_loss, margin, label_smooth, num_classes):
     :param num_classes: 训练集的类别数；类型为int
     :return: 损失函数；类型为可调用的函数
     """
-    triplet = TripletLossOrigin(margin)
+    triplet = TripletLoss(margin)
 
     if label_smooth:
         xent = CrossEntropyLabelSmooth(num_classes=num_classes)

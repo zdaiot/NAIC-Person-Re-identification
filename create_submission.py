@@ -152,7 +152,7 @@ class CreateSubmission(object):
 
 
 if __name__ == "__main__":
-    test_baseline = True
+    test_baseline = False
     config = get_config()
     mean = (0.485, 0.456, 0.406)
     std = (0.229, 0.224, 0.225)
@@ -167,8 +167,9 @@ if __name__ == "__main__":
         create_submission.get_result(show=False)
     else:
         # 测试加了各种trick的模型
-        train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds = get_loaders(
-            train_dataset_root, config.n_splits, config.batch_size, config.num_workers, config.shuffle_train, config.use_erase, mean, std)
+        train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds = \
+            get_loaders(train_dataset_root, config.n_splits, config.batch_size, config.num_instances,
+                        config.num_workers, config.augmentation_flag, config.use_erase, mean, std)
 
         for fold_index, [train_loader, valid_loader, num_query, num_classes] in enumerate(zip(train_dataloader_folds,
                                                       valid_dataloader_folds, num_query_folds, num_classes_folds)):

@@ -14,19 +14,15 @@ def get_config():
         parser = argparse.ArgumentParser()
         # model hyper-parameters
         parser.add_argument('--batch_size', type=int, default=64, help='batch size')
+        parser.add_argument('--num_instances', type=int, default=4, help='num_instances for each class')
         parser.add_argument('--epoch', type=int, default=60, help='epoch')
         parser.add_argument('--num_workers', type=int, default=8)
         parser.add_argument('--selected_fold', type=list, default=[0], help='what folds for training?')
 
         # dataset set
-        parser.add_argument('--augmentation_flag', type=bool, default=True, help='if true, use augmentation method in train set')
+        parser.add_argument('--augmentation_flag', type=bool, default=False, help='if true, use augmentation method in train set')
         parser.add_argument('--n_splits', type=int, default=4, help='n_splits_fold')
-        parser.add_argument('--shuffle_train', type=bool, default=True, help='shuffle train dataset')
         parser.add_argument('--use_erase', type=bool, default=True, help='use erase or not in DataAugmentation')
-        # TODO not use
-        parser.add_argument('--crop', type=bool, default=False, help='if true, crop image to [height, width].')
-        parser.add_argument('--height', type=int, default=None, help='the height of cropped image')
-        parser.add_argument('--width', type=int, default=None, help='the width of cropped image')
 
         # model set 
         parser.add_argument('--model_name', type=str, default='resnet50',
@@ -40,20 +36,23 @@ def get_config():
         parser.add_argument('--label_smooth', type=bool, default=False, help='use label smooth in cross entropy')
 
         # 优化器设置
-        parser.add_argument('--optimizer_name', type=str, default='Adam', help='which optimizer to use')
+        parser.add_argument('--optimizer_name', type=str, default='SGD', help='which optimizer to use, Adam/SGD/author')
         parser.add_argument('--momentum_SGD', type=float, default=0.9, help='momentum in SGD')
         parser.add_argument('--base_lr', type=float, default=5e-2, help='init lr')
-        parser.add_argument('--bias_lr_factor', type=float, default=1, help='')
+        parser.add_argument('--bias_lr_factor', type=float, default=1, help='bias_lr=base_lr*bias_lr_factor')
         parser.add_argument('--weight_decay', type=float, default=5e-4, help='weight_decay in optimizer')
-        parser.add_argument('--weight_decay_bias', type=float, default=0.0, help='')
+        parser.add_argument('--weight_decay_bias', type=float, default=0.0, help='weight_decay for bias')
 
+        parser.add_argument('--scheduler_name', type=str, default='StepLR',
+                            help='which scheduler to use, StepLR/COS/author')
         # 设置WarmupMultiStepLR
         parser.add_argument('--steps', type=list, default=[20, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195,
                                                            210, 225, 240, 255], help='')
         parser.add_argument('--gamma', type=float, default=0.6, help='')
         parser.add_argument('--warmup_factor', type=float, default=0.01, help='')
-        parser.add_argument('--warmup_iters', type=int, default=10, help='')
-        parser.add_argument('--warmup_method', type=str, default='linear', help='constant/linear')
+        parser.add_argument('--warmup_iters', type=int, default=10,
+                            help='The first warmup_iters epoch adopts warm up strategy')
+        parser.add_argument('--warmup_method', type=str, default='linear', help='warmup method, constant/linear')
 
         # path set
         parser.add_argument('--save_path', type=str, default='./checkpoints')

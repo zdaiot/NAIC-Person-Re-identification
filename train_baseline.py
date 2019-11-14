@@ -42,6 +42,8 @@ class TrainBaseline(object):
 
         # 加载超参数
         self.epoch = config.epoch
+        self.optimizer_name = config.optimizer_name
+        self.scheduler_name = config.scheduler_name
 
         # 实例化实现各种子函数的 solver 类
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -51,15 +53,27 @@ class TrainBaseline(object):
         self.criterion = torch.nn.CrossEntropyLoss()
 
         # 加载优化函数以及学习率衰减策略
-        # self.optim = optim.Adam(self.model.module.parameters(), config.base_lr, weight_decay=config.weight_decay)
-        # self.optim = optim.Adam([{'params': self.model.module.resnet_layer.parameters(), 'lr': config.base_lr*0.1},
-        #                         {'params': self.model.module.classifier.parameters(), 'lr': config.base_lr}],
-        #                         weight_decay=config.weight_decay)
-        self.optim = optim.SGD([{'params': self.model.module.resnet_layer.parameters(), 'lr': config.base_lr*0.1},
-                                {'params': self.model.module.classifier.parameters(), 'lr': config.base_lr}],
-                                weight_decay=config.weight_decay, momentum=config.momentum_SGD, nesterov=True)
-        self.scheduler = optim.lr_scheduler.StepLR(self.optim, step_size=40, gamma=0.1)
-        # self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optim, self.epoch + 10)
+        if self.optimizer_name == 'Adam':
+            # self.optim = optim.Adam(self.model.module.parameters(), config.base_lr, weight_decay=config.weight_decay)
+            self.optim = optim.Adam([{'params': self.model.module.resnet_layer.parameters(), 'lr': config.base_lr*0.1},
+                                    {'params': self.model.module.classifier.parameters(), 'lr': config.base_lr}],
+                                    weight_decay=config.weight_decay)
+        elif self.optimizer_name == 'SGD':
+            self.optim = optim.SGD([{'params': self.model.module.resnet_layer.parameters(), 'lr': config.base_lr*0.1},
+                                    {'params': self.model.module.classifier.parameters(), 'lr': config.base_lr}],
+                                    weight_decay=config.weight_decay, momentum=config.momentum_SGD, nesterov=True)
+        elif self.optimizer_name == 'author':
+            self.optim = make_optimizer(config.optimizer_name, config.base_lr, config.momentum_SGD,
+                                        config.bias_lr_factor,
+                                        config.weight_decay, config.weight_decay_bias, self.model, self.num_gpus)
+
+        if self.scheduler_name == 'StepLR':
+            self.scheduler = optim.lr_scheduler.StepLR(self.optim, step_size=40, gamma=0.1)
+        elif self.scheduler_name == 'COS':
+            self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optim, self.epoch + 10)
+        elif self.scheduler_name == 'author':
+            self.scheduler = WarmupMultiStepLR(self.optim, config.steps, config.gamma, config.warmup_factor,
+                                               config.warmup_iters, config.warmup_method)
 
         # 创建保存权重的路径
         self.model_path = os.path.join(config.save_path, config.model_name)
