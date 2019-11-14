@@ -3,6 +3,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
+import glob
 from torchvision import transforms as T
 from torch.utils.data import DataLoader, Dataset
 from dataset.transform import DataAugmentation
@@ -319,6 +320,30 @@ def get_baseline_loader(root, batch_size, num_works, shuffle_train, mean=(0.485,
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_works, pin_memory=True, shuffle=shuffle_train)
     num_classes = len(train_id)
     return train_dataloader, num_classes
+
+
+def get_test_loader(test_dataset_root, batch_size, num_workers):
+    """
+
+    :param test_dataset_root: 测试数据集的根目录；类型为str
+    :param batch_size: batch的大小；类型为int
+    :param num_workers: 读取数据时的线程数；类型为int
+    :return: test_dataloader: 测试数据集的Dataloader
+    :return num_query: 查询集数量；类型为int
+    """
+    pic_path_query = os.path.join(test_dataset_root, 'query_a')
+    pic_path_gallery = os.path.join(test_dataset_root, 'gallery_a')
+
+    pic_list_query = glob.glob(pic_path_query + '/*.png')
+    pic_list_gallery = glob.glob(pic_path_gallery + '/*.png')
+
+    pic_list = pic_list_query + pic_list_gallery
+
+    test_dataset = TestDataset(pic_list)
+    num_query = len(pic_list_query)
+
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, num_workers=num_workers, pin_memory=True, shuffle=False)
+    return test_dataloader, num_query
 
 
 if __name__ == "__main__":

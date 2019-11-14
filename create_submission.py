@@ -8,7 +8,7 @@ import tqdm
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 from PIL import Image
-from dataset.NAIC_dataset import TestDataset, get_loaders, get_baseline_loader
+from dataset.NAIC_dataset import TestDataset, get_loaders, get_baseline_loader, get_test_loader
 from config import get_config
 from models.model import build_model, get_model
 from models.sync_bn.batchnorm import convert_model
@@ -17,7 +17,7 @@ from solver import Solver
 
 
 class CreateSubmission(object):
-    def __init__(self, config, num_classes, pth_path):
+    def __init__(self, config, num_classes, pth_path, test_dataloader, num_query):
         """
 
         :param config: 配置参数
@@ -28,7 +28,6 @@ class CreateSubmission(object):
 
         self.model_name = config.model_name
         self.last_stride = config.last_stride
-        self.test_dataset_root = os.path.join(config.dataset_root, '初赛A榜测试集')
         self.dist = config.dist
         self.num_gpus = torch.cuda.device_count()
         print('Using {} GPUS'.format(self.num_gpus))
@@ -49,23 +48,13 @@ class CreateSubmission(object):
         self.model = self.solver.load_checkpoint(pth_path)
         self.model.eval()
 
-        # 每一个查询样本从数据库中取出最近的10个样本
+        # 每一个查询样本从数据库中取出最近的200个样本
         self.num_choose = 200
+        self.num_query = num_query
+        self.test_dataloader = test_dataloader
 
-        # 加载test Dataloader
-        self.pic_path_query = os.path.join(self.test_dataset_root, 'query_a')
-        self.pic_path_gallery = os.path.join(self.test_dataset_root, 'gallery_a')
-
-        pic_list_query = glob.glob(self.pic_path_query + '/*.png')
-        pic_list_gallery = glob.glob(self.pic_path_gallery + '/*.png')
-
-        pic_list = pic_list_query + pic_list_gallery
-
-        test_dataset = TestDataset(pic_list)
-        self.num_query = len(pic_list_query)
-
-        self.test_dataloader = DataLoader(test_dataset, batch_size=config.batch_size, num_workers=config.num_workers,
-                                          pin_memory=True, shuffle=False)
+        self.pic_path_query = os.path.join(config.dataset_root, '初赛A榜测试集', 'query_a')
+        self.pic_path_gallery = os.path.join(config.dataset_root, '初赛A榜测试集', 'gallery_a')
 
         self.demo_names = os.listdir('dataset/demo_data')
         self.demo_results_path = './results'
@@ -158,12 +147,14 @@ if __name__ == "__main__":
     std = (0.229, 0.224, 0.225)
     train_dataset_root = os.path.join(config.dataset_root, '初赛训练集')
 
+    test_dataloader, num_query = get_test_loader(os.path.join(config.dataset_root, '初赛A榜测试集'), config.batch_size, config.num_workers)
+
     if test_baseline:
         # 测试baseline
         train_loader, num_classes = get_baseline_loader(train_dataset_root, config.batch_size, config.num_workers,
                                                         config.shuffle_train, mean, std)
         pth_path = os.path.join(config.save_path, config.model_name, '{}.pth'.format(config.model_name))
-        create_submission = CreateSubmission(config, num_classes, pth_path)
+        create_submission = CreateSubmission(config, num_classes, pth_path, test_dataloader, num_query)
         create_submission.get_result(show=False)
     else:
         # 测试加了各种trick的模型
@@ -177,6 +168,6 @@ if __name__ == "__main__":
                 continue
             pth_path = os.path.join(config.save_path, config.model_name, '{}_fold{}_best.pth'.format(config.model_name, fold_index))
             # 注意fold之间的因为类别数不同所以模型也不同，所以均要实例化TrainVal
-            create_submission = CreateSubmission(config, num_classes, pth_path)
+            create_submission = CreateSubmission(config, num_classes, pth_path, test_dataloader, num_query)
             create_submission.get_result(show=True)
 
