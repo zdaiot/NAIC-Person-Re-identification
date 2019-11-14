@@ -228,7 +228,7 @@ class TrainVal(object):
 
         rank1 = all_rank_precison[0]
         average_score = 0.5 * rank1 + 0.5 * mAP
-        print('Rank1: {:.2%}, mAP {:.2%}, average score {:.2%}, average score {:.2%}'.format(rank1, mAP, average_score, acc))
+        print('Rank1: {:.2%}, mAP {:.2%}, average score {:.2%}, acc {:.2%}'.format(rank1, mAP, average_score, acc))
         return rank1, mAP, average_score, acc
 
 

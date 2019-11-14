@@ -1,12 +1,10 @@
 import torch
 import os
-import json
-import codecs
 import numpy as np
 import tqdm
 import matplotlib.pyplot as plt
 from PIL import Image
-from dataset.NAIC_dataset import get_loaders, get_baseline_loader, get_test_loader
+from dataset.NAIC_dataset import get_loaders, get_baseline_loader
 from config import get_config
 from models.model import build_model, get_model
 from models.sync_bn.batchnorm import convert_model
