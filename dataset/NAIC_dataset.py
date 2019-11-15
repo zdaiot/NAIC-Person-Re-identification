@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader, Dataset
 from dataset.transform import DataAugmentation
 from utils.visualize import image_with_mask_torch
 from dataset.triplet_sampler import RandomIdentitySampler
-from utils.dataset_statics import get_folds_id, get_all_id
+from utils.data_analysis import get_folds_id, get_all_id
 
 
 class TrainDataset(Dataset):
@@ -137,7 +137,7 @@ class ValidateDataset(Dataset):
         transform_compose = T.Compose([to_tensor, normalize])
         image = transform_compose(image)
 
-        sample_label = torch.tensor(sample_label)
+        sample_label = torch.tensor(sample_label).long()
 
         return image, sample_label, sample_path
 
@@ -266,9 +266,9 @@ def get_loaders(root, n_splits, batch_size, num_instances, num_works, augmentati
     :param std: 每个通道的方差；类型为tuple
     :return train_dataloader_folds: 所有折训练集的Dataloader；类型为list
     :return valid_dataloader_folds: 所有折验证集的Dataloader；类型为list
-    :return num_query_folds: 所有折的查询集个数；类型为int
-    :return num_classes_folds: 所有折训练集的类别数；类型为int
-    :return train_valid_ratio_folds：所有折训练集类别数与查询集类别数的比例
+    :return num_query_folds: 与valid_dataloader_folds搭配使用，表示每一个valid_dataloader中前多少个样本是查询集；类型为list
+    :return num_classes_folds: 所有折训练集的类别数；类型为list
+    :return train_valid_ratio_folds：所有折训练集类别数与查询集类别数的比例；类型为list
     """
     train_list_txt_path = os.path.join(root, 'train_list.txt')
     root_pic = os.path.join(root, 'train_set')

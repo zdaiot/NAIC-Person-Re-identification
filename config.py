@@ -21,9 +21,9 @@ def get_config():
 
         # dataset set
         parser.add_argument('--augmentation_flag', type=bool, default=False,
-                            help='if true, use augmentation method in train set')
-        parser.add_argument('--n_splits', type=int, default=4, help='n_splits_fold')
+                            help='if true, use DataAugmentation in train set')
         parser.add_argument('--use_erase', type=bool, default=True, help='use erase or not in DataAugmentation')
+        parser.add_argument('--n_splits', type=int, default=3, help='n_splits_fold')
 
         # model set 
         parser.add_argument('--model_name', type=str, default='resnet50',
@@ -37,7 +37,8 @@ def get_config():
         parser.add_argument('--label_smooth', type=bool, default=False, help='use label smooth in cross entropy')
 
         # 优化器设置
-        parser.add_argument('--optimizer_name', type=str, default='SGD', help='which optimizer to use, Adam/SGD/author')
+        parser.add_argument('--optimizer_name', type=str, default='SGD',
+                            help='which optimizer to use, Adam/SGD/author')
         parser.add_argument('--momentum_SGD', type=float, default=0.9, help='momentum in SGD')
         parser.add_argument('--base_lr', type=float, default=5e-2, help='init lr')
         parser.add_argument('--bias_lr_factor', type=float, default=1, help='bias_lr=base_lr*bias_lr_factor')
@@ -61,7 +62,7 @@ def get_config():
 
         # 其他设置
         parser.add_argument('--cython', type=bool, default=True, help='use cython or python to eval')
-        parser.add_argument('--dist', type=str, default='cos_dist',
+        parser.add_argument('--dist', type=str, default='euclidean_dist',
                             help='How to measure similarity, cos_dist/re_rank/euclidean_dist')
 
         config = parser.parse_args()

@@ -14,6 +14,7 @@ from solver import Solver
 from models.model import build_model, get_model
 from dataset.NAIC_dataset import get_baseline_loader
 from utils.set_seed import seed_torch
+from utils.custom_optim import make_optimizer, WarmupMultiStepLR
 
 
 class TrainBaseline(object):
@@ -96,10 +97,8 @@ class TrainBaseline(object):
         """ 完成模型的训练，保存模型与日志
 
         :param train_loader: 训练集的Dataloader
-        :param valid_loader: 验证集的Dataloader
         :return: None
         """
-
         global_step = 0
 
         for epoch in range(self.epoch):

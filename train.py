@@ -77,7 +77,7 @@ class TrainVal(object):
                                     {'params': self.model.module.classifier.parameters(), 'lr': config.base_lr}],
                                     weight_decay=config.weight_decay, momentum=config.momentum_SGD, nesterov=True)
         elif self.optimizer_name == 'author':
-            self.optim = make_optimizer(config.optimizer_name, config.base_lr, config.momentum_SGD,
+            self.optim = make_optimizer('Adam', config.base_lr, config.momentum_SGD,
                                         config.bias_lr_factor,
                                         config.weight_decay, config.weight_decay_bias, self.model, self.num_gpus)
 
@@ -107,7 +107,7 @@ class TrainVal(object):
             pickle.dump({'seed': self.seed}, f, -1)
 
         # 设置其他参数
-        self.max_acc = 0
+        self.max_score = 0
 
     def train(self, train_loader, valid_loader):
         """ 完成模型的训练，保存模型与日志
@@ -140,7 +140,7 @@ class TrainVal(object):
                 self.writer.add_scalar('train_acc_iteration', train_acc_iteration.item() * 100, global_step + i)
 
                 descript = "Fold: %d, Train Loss: %.7f, Train Acc :%.2f, Lr :%.7f" % (self.fold, loss.item(),
-                                                                                      train_acc_iteration.item() * 100,
+                                                                                      train_acc_iteration * 100,
                                                                                       self.scheduler.get_lr()[0])
                 tbar.set_description(desc=descript)
 
@@ -159,18 +159,18 @@ class TrainVal(object):
                                                                                    epoch_loss,
                                                                                    epoch_acc * 100))
             # 验证模型
-            rank1, mAP, average_score, acc = self.validation(valid_loader)
+            rank1, mAP, average_score = self.validation(valid_loader)
 
-            if acc > self.max_acc:
+            if average_score > self.max_score:
                 is_best = True
-                self.max_acc = acc
+                self.max_score = average_score
             else:
                 is_best = False
 
             state = {
                 'epoch': epoch,
                 'state_dict': self.model.module.state_dict(),
-                'max_acc': self.max_acc
+                'max_score': self.max_score
             }
 
             self.solver.save_checkpoint(
@@ -178,7 +178,6 @@ class TrainVal(object):
             self.writer.add_scalar('rank1', rank1, epoch)
             self.writer.add_scalar('mAP', mAP, epoch)
             self.writer.add_scalar('average_score', average_score, epoch)
-            self.writer.add_scalar('acc', acc, epoch)
 
     def validation(self, valid_loader):
         """ 完成模型的验证过程
@@ -187,11 +186,9 @@ class TrainVal(object):
         :return rank1: rank1得分；类型为float
         :return mAP: 平均检索精度；类型为float
         :return average_score: 平均得分；类型为float
-        :return acc: 分类准确率；类型为float
         """
         self.model.eval()
         tbar = tqdm.tqdm(valid_loader)
-        images_number, corrects = 0, 0
         features_all, labels_all = [], []
         with torch.no_grad():
             for i, (images, labels, paths) in enumerate(tbar):
@@ -199,11 +196,6 @@ class TrainVal(object):
                 labels_predict, global_features, features = self.solver.forward(images)
                 features_all.append(features.detach().cpu())
                 labels_all.append(labels)
-
-                images_number += images.size(0)
-                corrects += (labels_predict.max(1)[1] == labels.to(self.device)).float().sum()
-
-        acc = corrects / images_number
 
         features_all = torch.cat(features_all, dim=0)
         labels_all = torch.cat(labels_all, dim=0)
@@ -228,8 +220,8 @@ class TrainVal(object):
 
         rank1 = all_rank_precison[0]
         average_score = 0.5 * rank1 + 0.5 * mAP
-        print('Rank1: {:.2%}, mAP {:.2%}, average score {:.2%}, acc {:.2%}'.format(rank1, mAP, average_score, acc))
-        return rank1, mAP, average_score, acc
+        print('Rank1: {:.2%}, mAP {:.2%}, average score {:.2%}'.format(rank1, mAP, average_score))
+        return rank1, mAP, average_score
 
 
 if __name__ == "__main__":
