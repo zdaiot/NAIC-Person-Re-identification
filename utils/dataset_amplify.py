@@ -154,5 +154,5 @@ if __name__ == "__main__":
         ]
     augment_times = 4
 
-    dataset_ampligy = DatasetAmplify(data_root, id_txt_path, target_root, sample_id_path)
-    dataset_ampligy.do_amplify(augmentations, augment_times)
+    dataset_amplify = DatasetAmplify(data_root, id_txt_path, target_root, sample_id_path)
+    dataset_amplify.do_amplify(augmentations, augment_times)

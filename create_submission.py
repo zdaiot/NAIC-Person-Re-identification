@@ -96,11 +96,7 @@ class CreateSubmission(object):
 
         result = {}
         for query_index, query_dist in enumerate(distmat):
-            # 注意若使用的是cos_dist需要从大到小将序排列（加负号），其余为从小到大升序排列（不加负号）
-            if self.dist == 'cos_dist':
-                choose_index = np.argsort(-query_dist)[:self.num_choose]
-            else:
-                choose_index = np.argsort(query_dist)[:self.num_choose]
+            choose_index = np.argsort(query_dist)[:self.num_choose]
             query_name = query_names[query_index]
             gallery_name = gallery_names[choose_index]
             result[query_name] = gallery_name.tolist()
@@ -162,12 +158,12 @@ if __name__ == "__main__":
             get_loaders(train_dataset_root, config.n_splits, config.batch_size, config.num_instances,
                         config.num_workers, config.augmentation_flag, config.use_erase, mean, std)
 
-        for fold_index, [train_loader, valid_loader, num_query, num_classes] in enumerate(zip(train_dataloader_folds,
+        for fold_index, [train_loader, valid_loader, _, num_classes] in enumerate(zip(train_dataloader_folds,
                                                       valid_dataloader_folds, num_query_folds, num_classes_folds)):
             if fold_index not in config.selected_fold:
                 continue
             pth_path = os.path.join(config.save_path, config.model_name, '{}_fold{}_best.pth'.format(config.model_name, fold_index))
             # 注意fold之间的因为类别数不同所以模型也不同，所以均要实例化TrainVal
             create_submission = CreateSubmission(config, num_classes, pth_path, test_dataloader, num_query)
-            create_submission.get_result(show=True)
+            create_submission.get_result(show=False)
 

@@ -26,7 +26,7 @@ def get_config():
         parser.add_argument('--use_erase', type=bool, default=True,
                             help='if true and augmentation_flag=True, use erase in DataAugmentation class')
         parser.add_argument('--n_splits', type=int, default=3, help='n_splits_fold')
-        parser.add_argument('--use_amplify', type=bool, default=True, help='Data extension of training data set')
+        parser.add_argument('--use_amplify', type=bool, default=False, help='Data extension of training data set')
 
         # model set 
         parser.add_argument('--model_name', type=str, default='resnet50',
@@ -68,7 +68,7 @@ def get_config():
 
         # 其他设置
         parser.add_argument('--cython', type=bool, default=True, help='use cython or python to eval')
-        parser.add_argument('--dist', type=str, default='euclidean_dist',
+        parser.add_argument('--dist', type=str, default='cos_dist',
                             help='How to measure similarity, cos_dist/re_rank/euclidean_dist')
 
         config = parser.parse_args()

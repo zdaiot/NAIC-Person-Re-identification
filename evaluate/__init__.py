@@ -1,6 +1,7 @@
+import numpy as np
+import torch
 from evaluate.eval_reid import eval_func
 from evaluate.re_ranking import re_ranking
-import torch
 
 
 def euclidean_dist(x, y):
@@ -21,9 +22,9 @@ def euclidean_dist(x, y):
 
 
 def re_rank(q, g):
-    qq_dist = euclidean_dist(q, q).numpy()
-    gg_dist = euclidean_dist(g, g).numpy()
-    qg_dist = euclidean_dist(q, g).numpy()
+    qq_dist = euclidean_dist(q, q)
+    gg_dist = euclidean_dist(g, g)
+    qg_dist = euclidean_dist(q, g)
     distmat = re_ranking(qg_dist, qq_dist, gg_dist)
     return distmat
 
@@ -43,4 +44,5 @@ def cos_dist(query_features, gallery_features):
     gallery_features = gallery_features.div(gnorm.expand_as(gallery_features))
 
     score = torch.mm(query_features, gallery_features.t())
-    return score.cpu().numpy()
+    score = score.cpu().numpy()
+    return 1 - score
