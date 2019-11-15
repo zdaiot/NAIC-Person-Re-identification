@@ -228,7 +228,10 @@ if __name__ == "__main__":
     config = get_config()
     mean = (0.485, 0.456, 0.406)
     std = (0.229, 0.224, 0.225)
-    train_dataset_root = os.path.join(config.dataset_root, '初赛训练集')
+    if config.use_amplify:
+        train_dataset_root = os.path.join(config.dataset_root, 'train_amplify')
+    else:
+        train_dataset_root = os.path.join(config.dataset_root, '初赛训练集')
     train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds = \
         get_loaders(train_dataset_root, config.n_splits, config.batch_size, config.num_instances, config.num_workers,
                     config.augmentation_flag, config.use_erase, mean, std)

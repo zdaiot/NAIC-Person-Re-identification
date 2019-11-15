@@ -130,10 +130,10 @@ class DatasetAmplify:
             print('Removing %s' % self.target_root)
             shutil.rmtree(self.target_root)
             print('Building %s' % self.target_root)
-            os.mkdir(self.target_root)
+            os.makedirs(self.target_root)
         else:
             print('Building %s' % self.target_root)
-            os.mkdir(self.target_root)
+            os.makedirs(self.target_root)
 
         if os.path.exists(self.sample_id_path):
             print('Removing %s' % self.sample_id_path)
@@ -141,13 +141,13 @@ class DatasetAmplify:
 
 
 if __name__ == "__main__":
-    data_root = 'data/Uaic/初赛训练集/初赛训练集/train_set'
-    id_txt_path = 'data/Uaic/初赛训练集/初赛训练集/train_list.txt'
-    target_root = 'data/Uaic/train_amplify/images'
-    sample_id_path = 'data/Uaic/train_amplify/amplify_id.txt'
+    data_root = 'dataset/NAIC_data/初赛训练集/train_set'
+    id_txt_path = 'dataset/NAIC_data/初赛训练集/train_list.txt'
+    target_root = 'dataset/NAIC_data/train_amplify/train_set'
+    sample_id_path = 'dataset/NAIC_data/train_amplify/train_list.txt'
     augmentations = [
         HorizontalFlip(p=1.0), 
-        RandomBrightness(limit=0.15, p=1.0, always_apply=True), 
+        RandomBrightness(limit=0.15, p=1.0, always_apply=True),
         ShiftScaleRotate(shift_limit=0.07, scale_limit=0.1, rotate_limit=15, always_apply=True), 
         Blur(p=1.0, always_apply=True), 
         RandomCrop(height=256, width=128, always_apply=True)
