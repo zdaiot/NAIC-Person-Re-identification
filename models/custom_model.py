@@ -58,18 +58,35 @@ class CustomModel(nn.Module):
 
         if self.model_name.startswith('resnet'):
             model = getattr(models, self.model_name)(pretrained=True)
-            model.layer4[0].conv2.stride = (self.last_stride, self.last_stride)
+            if self.model_name == 'resnet18' or self.model_name == 'resnet34':
+                model.layer4[0].conv1.stride = (self.last_stride, self.last_stride)
+            else:
+                model.layer4[0].conv2.stride = (self.last_stride, self.last_stride)
             model.layer4[0].downsample[0].stride = (self.last_stride, self.last_stride)
-        elif self.model_name.startswith('dpn') or self.model_name.startswith('densenet'):
-            assert "Not Support Yet!"
+            in_features = model.fc.in_features
+            self.feature_layer = torch.nn.Sequential(*list(model.children())[:-1])
+
+        elif self.model_name.startswith('dpn'):
+            model = getattr(pretrainedmodels, self.model_name)(pretrained='imagenet')
+            in_features = model.last_linear.in_channels
+            self.feature_layer = torch.nn.Sequential(*list(model.children())[:-1])
+            self.feature_layer.avg_pool = torch.nn.AdaptiveAvgPool2d(output_size=(1, 1))
+
+        elif self.model_name.startswith('densenet'):
+            model = getattr(pretrainedmodels, self.model_name)(pretrained='imagenet')
+            in_features = model.last_linear.in_features
+            self.feature_layer = torch.nn.Sequential(*list(model.children())[:-1])
+            self.feature_layer.avg_pool = torch.nn.AdaptiveAvgPool2d(output_size=(1, 1))
+
         else:
             model = getattr(pretrainedmodels, self.model_name)(pretrained='imagenet')
             model.avg_pool = torch.nn.AdaptiveAvgPool2d(output_size=(1, 1))
+            in_features = model.last_linear.in_features
+            self.feature_layer = torch.nn.Sequential(*list(model.children())[:-1])
 
-        self.feature_layer = torch.nn.Sequential(*list(model.children())[:-1])
-        # self.bottleneck = torch.nn.BatchNorm1d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-        # self.fc = torch.nn.Linear(in_features=2048, out_features=self.num_classes, bias=False)
-        self.classifier = ClassBlock(2048, self.num_classes, droprate=0.5, return_f=True)
+        # self.bottleneck = torch.nn.BatchNorm1d(in_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        # self.fc = torch.nn.Linear(in_features=in_features, out_features=self.num_classes, bias=False)
+        self.classifier = ClassBlock(in_features, self.num_classes, droprate=0.5, return_f=True)
 
     def forward(self, x):
         """
@@ -89,6 +106,6 @@ class CustomModel(nn.Module):
 
 if __name__ == '__main__':
     inputs = torch.rand((64, 3, 256, 128))
-    custom_resnet = CustomModel('se_resnet50', last_stride=1, num_classes=2000)
+    custom_resnet = CustomModel('resnet18', last_stride=1, num_classes=2000)
     scores, global_features, features = custom_resnet(inputs)
     print(scores.size(), global_features.size(), features.size())
