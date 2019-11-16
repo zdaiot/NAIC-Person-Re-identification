@@ -21,13 +21,13 @@ from evaluate import euclidean_dist, eval_func, re_rank, cos_dist
 
 
 class TrainVal(object):
-    def __init__(self, config, num_query, num_classes, train_valid_ratio, fold):
+    def __init__(self, config, num_query, num_classes, num_valid_classes, fold):
         """
 
         :param config: 配置参数
         :param num_query: 该fold查询集的数量；类型为int
         :param num_classes: 该fold训练集的类别数；类型为int
-        :param train_valid_ratio: 该fold训练集与验证集之间的比例；类型为float
+        :param num_valid_classes: 该fold验证集的类别数；类型为int
         :param fold: 训练的哪一折；类型为int
         """
         self.num_query = num_query
@@ -40,8 +40,8 @@ class TrainVal(object):
         self.cython = config.cython
         self.num_gpus = torch.cuda.device_count()
         print('Using {} GPUS'.format(self.num_gpus))
+        print('TRAIN_VALID_RATIO: {}'.format(self.num_classes/num_valid_classes))
         print('NUM_CLASS: {}'.format(self.num_classes))
-        print('TRAIN_VALID_RATIO', train_valid_ratio)
         if self.cython:
             print('USE CYTHON TO EVAL!')
         print('USE LOSS: {}'.format(config.selected_loss))
@@ -69,13 +69,15 @@ class TrainVal(object):
         # 加载优化函数以及学习率衰减策略
         if self.optimizer_name == 'Adam':
             # self.optim = optim.Adam(self.model.module.parameters(), config.base_lr, weight_decay=config.weight_decay)
-            self.optim = optim.Adam([{'params': self.model.module.resnet_layer.parameters(), 'lr': config.base_lr*0.1},
-                                    {'params': self.model.module.classifier.parameters(), 'lr': config.base_lr}],
-                                    weight_decay=config.weight_decay)
+            self.optim = optim.Adam(
+                [{'params': self.model.module.feature_layer.parameters(), 'lr': config.base_lr * 0.1},
+                 {'params': self.model.module.classifier.parameters(), 'lr': config.base_lr}],
+                weight_decay=config.weight_decay)
         elif self.optimizer_name == 'SGD':
-            self.optim = optim.SGD([{'params': self.model.module.resnet_layer.parameters(), 'lr': config.base_lr*0.1},
-                                    {'params': self.model.module.classifier.parameters(), 'lr': config.base_lr}],
-                                    weight_decay=config.weight_decay, momentum=config.momentum_SGD, nesterov=True)
+            self.optim = optim.SGD(
+                [{'params': self.model.module.feature_layer.parameters(), 'lr': config.base_lr * 0.1},
+                 {'params': self.model.module.classifier.parameters(), 'lr': config.base_lr}],
+                weight_decay=config.weight_decay, momentum=config.momentum_SGD, nesterov=True)
         elif self.optimizer_name == 'author':
             self.optim = make_optimizer('Adam', config.base_lr, config.momentum_SGD,
                                         config.bias_lr_factor,
@@ -232,16 +234,30 @@ if __name__ == "__main__":
         train_dataset_root = os.path.join(config.dataset_root, 'train_amplify')
     else:
         train_dataset_root = os.path.join(config.dataset_root, '初赛训练集')
-    train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds = \
-        get_loaders(train_dataset_root, config.n_splits, config.batch_size, config.num_instances, config.num_workers,
-                    config.augmentation_flag, config.use_erase, mean, std)
+    train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds = \
+        get_loaders(
+            train_dataset_root,
+            config.n_splits,
+            config.batch_size,
+            config.num_instances,
+            config.num_workers,
+            config.augmentation_flag,
+            config.use_erase,
+            mean, std
+        )
 
-    for fold_index, [train_loader, valid_loader, num_query, num_classes, train_valid_ratio] in enumerate(zip(
-            train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds,
-            train_valid_ratio_folds)):
+    for fold_index, [train_loader, valid_loader, num_query, num_classes] in \
+        enumerate(
+            zip(
+            train_dataloader_folds,
+            valid_dataloader_folds,
+            num_query_folds,
+            num_classes_folds,
+            )
+    ):
 
         if fold_index not in config.selected_fold:
             continue
         # 注意fold之间的因为类别数不同所以模型也不同，所以均要实例化TrainVal
-        train_val = TrainVal(config, num_query, num_classes, train_valid_ratio, fold_index)
+        train_val = TrainVal(config, num_query, num_classes[0], num_classes[1], fold_index)
         train_val.train(train_loader, valid_loader)

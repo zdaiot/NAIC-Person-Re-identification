@@ -145,21 +145,28 @@ if __name__ == "__main__":
     std = (0.229, 0.224, 0.225)
     train_dataset_root = os.path.join(config.dataset_root, '初赛训练集')
 
-    train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds = \
-        get_loaders(train_dataset_root, config.n_splits, config.batch_size, config.num_instances,
-                    config.num_workers, config.augmentation_flag, config.use_erase, mean, std)
+    _, valid_dataloader_folds, num_query_folds, num_classes_folds = get_loaders(
+        train_dataset_root,
+        config.n_splits,
+        config.batch_size,
+        config.num_instances,
+        config.num_workers,
+        config.augmentation_flag,
+        config.use_erase,
+        mean, std
+    )
 
-    for fold_index, [train_loader, valid_loader, num_query, num_classes] in enumerate(zip(train_dataloader_folds,
-                                                  valid_dataloader_folds, num_query_folds, num_classes_folds)):
+    for fold_index, [_, valid_loader, num_query, num_classes] in enumerate(zip(valid_dataloader_folds, num_query_folds, num_classes_folds)):
         if fold_index not in config.selected_fold:
             continue
+        num_train_classes = num_classes[0]
         pth_path = os.path.join(config.save_path, config.model_name, '{}_fold{}_best.pth'.format(config.model_name, fold_index))
         # 注意fold之间的因为类别数不同所以模型也不同，所以均要实例化TrainVal
         if demo_on_baseline:
-            _, num_classes = get_baseline_loader(train_dataset_root, config.batch_size, config.num_workers,
+            _, num_train_classes = get_baseline_loader(train_dataset_root, config.batch_size, config.num_workers,
                                                             True, mean, std)
             pth_path = os.path.join(config.save_path, config.model_name,
                                     '{}.pth'.format(config.model_name))
-        create_submission = Demo(config, num_classes, pth_path, valid_loader, num_query)
+        create_submission = Demo(config, num_train_classes, pth_path, valid_loader, num_query)
         create_submission.get_result(show=True)
 

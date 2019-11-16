@@ -15,16 +15,16 @@ from solver import Solver
 
 
 class CreateSubmission(object):
-    def __init__(self, config, num_classes, pth_path, test_dataloader, num_query):
+    def __init__(self, config, num_train_classes, pth_path, test_dataloader, num_query):
         """
 
         :param config: 配置参数
-        :param num_classes: 类别数；类型为int
+        :param num_train_classes: 训练集类别数，用于初始化模型；类型为int
         :param pth_path: 权重文件路径；类型为str
         :param test_dataloader: 测试数据集的Dataloader
         :param num_query: 查询集数量；类型为int
         """
-        self.num_classes = num_classes
+        self.num_train_classes = num_train_classes
 
         self.model_name = config.model_name
         self.last_stride = config.last_stride
@@ -33,7 +33,7 @@ class CreateSubmission(object):
         print('Using {} GPUS'.format(self.num_gpus))
 
         # 加载模型，只要有GPU，则使用DataParallel函数，当GPU有多个GPU时，调用sync_bn函数
-        self.model = get_model(self.model_name, self.num_classes, self.last_stride)
+        self.model = get_model(self.model_name, self.num_train_classes, self.last_stride)
         if torch.cuda.is_available():
             self.model = torch.nn.DataParallel(self.model)
             if self.num_gpus > 1:
@@ -147,23 +147,29 @@ if __name__ == "__main__":
 
     if test_baseline:
         # 测试baseline
-        train_loader, num_classes = get_baseline_loader(train_dataset_root, config.batch_size, config.num_workers,
+        _, num_train_classes = get_baseline_loader(train_dataset_root, config.batch_size, config.num_workers,
                                                         True, mean, std)
         pth_path = os.path.join(config.save_path, config.model_name, '{}.pth'.format(config.model_name))
-        create_submission = CreateSubmission(config, num_classes, pth_path, test_dataloader, num_query)
+        create_submission = CreateSubmission(config, num_train_classes, pth_path, test_dataloader, num_query)
         create_submission.get_result(show=False)
     else:
         # 测试加了各种trick的模型
-        train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds = \
-            get_loaders(train_dataset_root, config.n_splits, config.batch_size, config.num_instances,
-                        config.num_workers, config.augmentation_flag, config.use_erase, mean, std)
+        _, _, _, num_classes_folds = get_loaders(
+                train_dataset_root,
+                config.n_splits,
+                config.batch_size,
+                config.num_instances,
+                config.num_workers,
+                config.augmentation_flag,
+                config.use_erase,
+                mean, std
+            )
 
-        for fold_index, [train_loader, valid_loader, _, num_classes] in enumerate(zip(train_dataloader_folds,
-                                                      valid_dataloader_folds, num_query_folds, num_classes_folds)):
+        for fold_index, (num_train_classes, _) in enumerate(num_classes_folds):
             if fold_index not in config.selected_fold:
                 continue
             pth_path = os.path.join(config.save_path, config.model_name, '{}_fold{}_best.pth'.format(config.model_name, fold_index))
             # 注意fold之间的因为类别数不同所以模型也不同，所以均要实例化TrainVal
-            create_submission = CreateSubmission(config, num_classes, pth_path, test_dataloader, num_query)
+            create_submission = CreateSubmission(config, num_train_classes, pth_path, test_dataloader, num_query)
             create_submission.get_result(show=False)
 

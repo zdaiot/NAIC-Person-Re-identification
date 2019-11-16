@@ -25,13 +25,13 @@ def get_config():
                             help='if true, use DataAugmentation class in train set')
         parser.add_argument('--use_erase', type=bool, default=True,
                             help='if true and augmentation_flag=True, use erase in DataAugmentation class')
-        parser.add_argument('--n_splits', type=int, default=3, help='n_splits_fold')
+        parser.add_argument('--n_splits', type=int, default=2, help='n_splits_fold')
         parser.add_argument('--use_amplify', type=bool, default=False, help='Data extension of training data set')
 
         # model set 
-        parser.add_argument('--model_name', type=str, default='resnet50',
-                            help='resnet50/se_resnext50_32x4d/efficientnet_b4/resnet50/efficientnet_b4')
-        parser.add_argument('--last_stride', type=int, default=1, help='last stride in the model')
+        parser.add_argument('--model_name', type=str, default='se_resnet50',
+                            help='resnet50/resnet34/resnet101/resnet152/se_resnet50')
+        parser.add_argument('--last_stride', type=int, default=1, help='last stride in the resnet model')
 
         # loss set
         parser.add_argument('--selected_loss', type=str, default='softmax_triplet',

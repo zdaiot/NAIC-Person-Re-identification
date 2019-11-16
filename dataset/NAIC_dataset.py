@@ -160,6 +160,8 @@ class queryGallerySeparate:
         self.root = root
         self.train_list_txt_path = train_list_txt_path
         self.class_id = class_id
+        # 因为样本的id可能是不连续的，所以要将样本id映射为类标
+        self.id_to_label = {id: label for label, id in enumerate(sorted(class_id))}
         self.samples_list, self.labels_list = self.parse_id_list()
 
     def query_gallery_separate(self):
@@ -207,7 +209,7 @@ class queryGallerySeparate:
                 if sample_id in self.class_id:
                     sample_name = sample.split(' ')[0].split('/')[1]
                     samples_list.append(sample_name)
-                    labels_list.append(sample_id)
+                    labels_list.append(self.id_to_label[sample_id])
 
         return samples_list, labels_list
 
@@ -267,37 +269,57 @@ def get_loaders(root, n_splits, batch_size, num_instances, num_works, augmentati
     :return train_dataloader_folds: 所有折训练集的Dataloader；类型为list
     :return valid_dataloader_folds: 所有折验证集的Dataloader；类型为list
     :return num_query_folds: 与valid_dataloader_folds搭配使用，表示每一个valid_dataloader中前多少个样本是查询集；类型为list
-    :return num_classes_folds: 所有折训练集的类别数；类型为list
-    :return train_valid_ratio_folds：所有折训练集类别数与查询集类别数的比例；类型为list
+    :return num_classes_folds: 所有折的训练集类别数,验证集类别数；类型为list；第i个值为第i折的[训练集类别数, 验证集类别数]
     """
     train_list_txt_path = os.path.join(root, 'train_list.txt')
     root_pic = os.path.join(root, 'train_set')
     train_dataloader_folds, valid_dataloader_folds = list(), list()
     num_query_folds, num_classes_folds = list(), list()
-    train_valid_ratio_folds = list()
+
     # 分层交叉验证
     train_id_folds, valid_id_folds = get_folds_id(train_list_txt_path, n_splits)
     for train_id_fold, valid_id_fold in zip(train_id_folds, valid_id_folds):
-        train_dataset = TrainDataset(root=root_pic, train_list_txt_path=train_list_txt_path, train_id=train_id_fold,
-                                     augmentation_flag=augmentation_flag, use_erase=use_erase, mean=mean, std=std)
+        train_dataset = TrainDataset(
+            root=root_pic,
+            train_list_txt_path=train_list_txt_path,
+            train_id=train_id_fold,
+            augmentation_flag=augmentation_flag,
+            use_erase=use_erase, mean=mean, std=std
+        )
 
-        query_gallery_separate = queryGallerySeparate(root=root_pic, train_list_txt_path=train_list_txt_path, class_id=valid_id_fold)
+        train_dataloader = DataLoader(
+            train_dataset,
+            batch_size=batch_size,
+            num_workers=num_works,
+            pin_memory=True,
+            sampler=RandomIdentitySampler(train_dataset.samples_list, batch_size, num_instances),
+        )
+
+        query_gallery_separate = queryGallerySeparate(
+            root=root_pic,
+            train_list_txt_path=train_list_txt_path,
+            class_id=valid_id_fold
+        )
         query_list, gallery_list, num_query = query_gallery_separate.query_gallery_separate()
-        valid_dataset = ValidateDataset(root=root_pic, samples_list=query_list + gallery_list, mean=mean, std=std)
-
-        train_dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_works, pin_memory=True,
-                                sampler=RandomIdentitySampler(train_dataset.samples_list, batch_size, num_instances),
-                                      shuffle=False)
+        valid_dataset = ValidateDataset(
+            root=root_pic,
+            samples_list=query_list + gallery_list,
+            mean=mean, std=std
+        )
         # 注意可以根据num_query来划分出查询集和数据库
-        valid_dataloader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_works,
-                                      pin_memory=True, shuffle=False)
+        valid_dataloader = DataLoader(
+            valid_dataset,
+            batch_size=batch_size,
+            num_workers=num_works,
+            pin_memory=True
+        )
 
         train_dataloader_folds.append(train_dataloader)
         valid_dataloader_folds.append(valid_dataloader)
         num_query_folds.append(num_query)
-        num_classes_folds.append(len(train_id_fold))
-        train_valid_ratio_folds.append(len(train_id_fold)/len(valid_id_fold))
-    return train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds
+        num_classes_folds.append([len(train_id_fold), len(valid_id_fold)])
+
+    return train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds
 
 
 def get_baseline_loader(root, batch_size, num_works, shuffle_train, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
@@ -315,9 +337,21 @@ def get_baseline_loader(root, batch_size, num_works, shuffle_train, mean=(0.485,
     train_list_txt_path = os.path.join(root, 'train_list.txt')
     root_pic = os.path.join(root, 'train_set')
     train_id = get_all_id(train_list_txt_path)
-    train_dataset = TrainDataset(root=root_pic, train_list_txt_path=train_list_txt_path, train_id=train_id,
-                                 augmentation_flag=False, use_erase=False, mean=mean, std=std)
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_works, pin_memory=True, shuffle=shuffle_train)
+    train_dataset = TrainDataset(
+        root=root_pic,
+        train_list_txt_path=train_list_txt_path,
+        train_id=train_id,
+        augmentation_flag=False,
+        use_erase=False,
+        mean=mean, std=std)
+
+    train_dataloader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        num_workers=num_works,
+        pin_memory=True,
+        shuffle=shuffle_train
+    )
     num_classes = len(train_id)
     return train_dataloader, num_classes
 
@@ -352,7 +386,7 @@ if __name__ == "__main__":
     root = 'dataset/NAIC_data/初赛训练集'
     n_splits = 3
 
-    train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds, train_valid_ratio_folds = \
+    train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds = \
         get_loaders(root, n_splits, batch_size=8, num_instances=4, num_works=8, augmentation_flag=False, use_erase=False)
     for train_dataloader, valid_dataloader, num_query, num_classes in zip(train_dataloader_folds,
                                                                           valid_dataloader_folds, num_query_folds,

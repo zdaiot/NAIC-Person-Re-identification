@@ -1,5 +1,5 @@
 from models.baseline import Baseline
-from models.custom_resnet import CustomResnet
+from models.custom_model import CustomModel
 
 
 def build_model(model_name, num_classes, last_stride, model_pretrain_path='dataset/NAIC_data/resnet50-19c8e357.pth'):
@@ -16,12 +16,11 @@ def build_model(model_name, num_classes, last_stride, model_pretrain_path='datas
 
 
 def get_model(model_name, num_classes, last_stride):
-    """ 我自己实现的resnet
+    """ 我自己实现的各种模型
 
     :param model_name: 模型的名称；类型为str
     :param num_classes: 训练集的类别数；类型为int
-    :param last_stride: 模型最后一层的步长；类型为int
+    :param last_stride: 模型最后一层的步长，只能在resnet中使用；类型为int
     :return: 模型的实例
     """
-    if 'resnet' in model_name:
-        return CustomResnet('resnet50', last_stride=last_stride, num_classes=num_classes)
+    return CustomModel(model_name, last_stride=last_stride, num_classes=num_classes)
