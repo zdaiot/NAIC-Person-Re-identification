@@ -25,7 +25,7 @@ def get_config():
                             help='if true, use DataAugmentation class in train set')
         parser.add_argument('--use_erase', type=bool, default=True,
                             help='if true and augmentation_flag=True, use erase in DataAugmentation class')
-        parser.add_argument('--n_splits', type=int, default=2, help='n_splits_fold')
+        parser.add_argument('--n_splits', type=int, default=3, help='n_splits_fold')
         parser.add_argument('--use_amplify', type=bool, default=False, help='Data extension of training data set')
 
         # model set 
