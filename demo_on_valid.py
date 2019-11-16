@@ -152,7 +152,8 @@ if __name__ == "__main__":
         config.num_instances,
         config.num_workers,
         config.augmentation_flag,
-        config.use_erase,
+        config.erase_prob,
+        config.gray_prob,
         mean, std
     )
 

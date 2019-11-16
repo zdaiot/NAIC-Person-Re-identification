@@ -6,21 +6,22 @@ from PIL import Image
 import glob
 from torchvision import transforms as T
 from torch.utils.data import DataLoader, Dataset
-from dataset.transform import DataAugmentation
+from utils.transforms import DataAugmentation
 from utils.visualize import image_with_mask_torch
 from dataset.triplet_sampler import RandomIdentitySampler
 from utils.data_analysis import get_folds_id, get_all_id
 
 
 class TrainDataset(Dataset):
-    def __init__(self, root, train_list_txt_path, train_id, augmentation_flag, use_erase, mean, std):
+    def __init__(self, root, train_list_txt_path, train_id, augmentation_flag, erase_prob, gray_prob, mean, std):
         """ 训练数据集的Dataset类
 
         :param root: 训练数据集的根目录；类型为str
         :param train_list_txt_path: 存储全部数据集对应的id的txt文件；类型为str
         :param train_id: 筛选用于训练集的id，类型为list
         :param augmentation_flag: 是否对样本使用额外的数据增强；类型为bool
-        :param use_erase: 是否使用随机擦除；类型为bool
+        :param erase_prob: 数据增强中随机擦除的概率；类型为float
+        :param gray_prob: 数据增强中转为灰度图的概率；类型为float
         :param mean: 每个通道的均值；类型为tuple
         :param std: 每个通道的方差；类型为tuple
         """
@@ -32,7 +33,7 @@ class TrainDataset(Dataset):
         self.id_to_label = {id: label for label, id in enumerate(sorted(train_id))}
         self.samples_list = self.parse_id_list()
         if augmentation_flag:
-            self.augmentation = DataAugmentation(erase_flag=use_erase)
+            self.augmentation = DataAugmentation(erase_prob=erase_prob, gray_prob=gray_prob)
         else:
             self.augmentation = None
 
@@ -254,7 +255,8 @@ class TestDataset(Dataset):
         return len(self.pic_list)
 
 
-def get_loaders(root, n_splits, batch_size, num_instances, num_works, augmentation_flag, use_erase, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
+def get_loaders(root, n_splits, batch_size, num_instances, num_works, augmentation_flag, erase_prob, gray_prob,
+                mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
     """ 获得各个折的训练集、验证集的Dataloader，以及各个折的查询集个数
 
     :param root: 训练数据集的根目录；类型为str
@@ -263,7 +265,8 @@ def get_loaders(root, n_splits, batch_size, num_instances, num_works, augmentati
     :param num_instances: 每一类选取多少个数据；类型为int
     :param num_works: 读取数据时的线程数；类型为int
     :param augmentation_flag: 是否对训练集进行额外的数据增强；类型为bool
-    :param use_erase: 是否在数据增强的时候使用erase；类型为bool
+    :param erase_prob: 数据增强中随机擦除的概率；类型为float
+    :param gray_prob: 数据增强中转为灰度图的概率；类型为float
     :param mean: 每个通道的均值；类型为tuple
     :param std: 每个通道的方差；类型为tuple
     :return train_dataloader_folds: 所有折训练集的Dataloader；类型为list
@@ -284,7 +287,9 @@ def get_loaders(root, n_splits, batch_size, num_instances, num_works, augmentati
             train_list_txt_path=train_list_txt_path,
             train_id=train_id_fold,
             augmentation_flag=augmentation_flag,
-            use_erase=use_erase, mean=mean, std=std
+            erase_prob=erase_prob,
+            gray_prob=gray_prob,
+            mean=mean, std=std
         )
 
         train_dataloader = DataLoader(
@@ -342,8 +347,10 @@ def get_baseline_loader(root, batch_size, num_works, shuffle_train, mean=(0.485,
         train_list_txt_path=train_list_txt_path,
         train_id=train_id,
         augmentation_flag=False,
-        use_erase=False,
-        mean=mean, std=std)
+        erase_prob=0,
+        gray_prob=0,
+        mean=mean, std=std
+    )
 
     train_dataloader = DataLoader(
         train_dataset,
@@ -387,9 +394,19 @@ if __name__ == "__main__":
     n_splits = 3
 
     train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds = \
-        get_loaders(root, n_splits, batch_size=8, num_instances=4, num_works=8, augmentation_flag=False, use_erase=False)
+        get_loaders(
+            root,
+            n_splits,
+            batch_size=8,
+            num_instances=4,
+            num_works=8,
+            augmentation_flag=False,
+            erase_prob=0.3,
+            gray_prob=0.3
+        )
     for train_dataloader, valid_dataloader, num_query, num_classes in zip(train_dataloader_folds,
-                                                                          valid_dataloader_folds, num_query_folds,
+                                                                          valid_dataloader_folds,
+                                                                          num_query_folds,
                                                                           num_classes_folds):
         for images, labels in train_dataloader:
             for index in range(images.size(0)):

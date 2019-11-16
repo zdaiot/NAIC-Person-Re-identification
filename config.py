@@ -21,11 +21,13 @@ def get_config():
         parser.add_argument('--selected_fold', type=list, default=[0], help='what folds for training?')
 
         # dataset set
-        parser.add_argument('--augmentation_flag', type=bool, default=False,
+        parser.add_argument('--augmentation_flag', type=bool, default=True,
                             help='if true, use DataAugmentation class in train set')
-        parser.add_argument('--use_erase', type=bool, default=True,
-                            help='if true and augmentation_flag=True, use erase in DataAugmentation class')
-        parser.add_argument('--n_splits', type=int, default=3, help='n_splits_fold')
+        parser.add_argument('--erase_prob', type=float, default=0.3,
+                            help='when augmentation_flag=True, erase probability in DataAugmentation class')
+        parser.add_argument('--gray_prob', type=float, default=0.3,
+                            help='when augmentation_flag=True, gray probability in DataAugmentation class')
+        parser.add_argument('--n_splits', type=int, default=4, help='n_splits_fold')
         parser.add_argument('--use_amplify', type=bool, default=False, help='Data extension of training data set')
 
         # model set 
@@ -40,10 +42,10 @@ def get_config():
         parser.add_argument('--label_smooth', type=bool, default=False, help='use label smooth in cross entropy')
 
         # 优化器设置
-        parser.add_argument('--optimizer_name', type=str, default='SGD',
+        parser.add_argument('--optimizer_name', type=str, default='author',
                             help='which optimizer to use, Adam/SGD/author')
         parser.add_argument('--momentum_SGD', type=float, default=0.9, help='momentum in SGD')
-        parser.add_argument('--base_lr', type=float, default=5e-2, help='init lr')
+        parser.add_argument('--base_lr', type=float, default=1e-4, help='init lr')
         parser.add_argument('--bias_lr_factor', type=float, default=1,
                             help='only use when optimizer_name=author, bias_lr=base_lr*bias_lr_factor')
         parser.add_argument('--weight_decay', type=float, default=5e-4, help='weight_decay in optimizer')
@@ -51,7 +53,7 @@ def get_config():
                             help='only use when optimizer_name=author, weight_decay for bias')
 
         # 学习率衰减策略
-        parser.add_argument('--scheduler_name', type=str, default='StepLR',
+        parser.add_argument('--scheduler_name', type=str, default='author',
                             help='which scheduler to use, StepLR/COS/author')
         # 设置WarmupMultiStepLR, 只有当scheduler_name=author时下面参数才有作用
         parser.add_argument('--steps', type=list, default=[20, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195,

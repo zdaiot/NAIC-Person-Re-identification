@@ -82,7 +82,7 @@ class RandomIdentitySampler(Sampler):
                 if len(batch_idxs_dict[pid]) == 0:
                     avai_pids.remove(pid)
 
-        self.length = len(final_idxs)
+        # self.length = len(final_idxs)
         return iter(final_idxs)
 
     def __len__(self):

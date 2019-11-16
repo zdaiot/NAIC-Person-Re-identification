@@ -195,7 +195,8 @@ class TrainVal(object):
         with torch.no_grad():
             for i, (images, labels, paths) in enumerate(tbar):
                 # 完成网络的前向传播
-                labels_predict, global_features, features = self.solver.forward(images)
+                # labels_predict, global_features, features = self.solver.forward(images)
+                features = self.solver.tta(images)
                 features_all.append(features.detach().cpu())
                 labels_all.append(labels)
 
@@ -242,7 +243,8 @@ if __name__ == "__main__":
             config.num_instances,
             config.num_workers,
             config.augmentation_flag,
-            config.use_erase,
+            config.erase_prob,
+            config.gray_prob,
             mean, std
         )
 

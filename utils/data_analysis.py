@@ -70,11 +70,8 @@ def get_folds_id(train_list_path, n_splits):
     train_valid_id = list()
     train_valid_id_number = list()
     for key, value in id_numbers.items():
-        if value == 1:
-            train_id_pin.append(key)
-        else:
-            train_valid_id.append(key)
-            train_valid_id_number.append(value)
+        train_valid_id.append(key)
+        train_valid_id_number.append(value)
     
     train_id_folds, valid_id_folds = list(), list()
     # 注意这里的随机种子要固定
