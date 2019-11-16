@@ -70,7 +70,7 @@ class TrainVal(object):
         if self.optimizer_name == 'Adam':
             # self.optim = optim.Adam(self.model.module.parameters(), config.base_lr, weight_decay=config.weight_decay)
             self.optim = optim.Adam(
-                [{'params': self.model.module.feature_layer.parameters(), 'lr': config.base_lr * 0.1},
+                [{'params': filter(lambda p: p.requires_grad, self.model.module.feature_layer.parameters()), 'lr': config.base_lr * 0.1},
                  {'params': self.model.module.classifier.parameters(), 'lr': config.base_lr}],
                 weight_decay=config.weight_decay)
         elif self.optimizer_name == 'SGD':

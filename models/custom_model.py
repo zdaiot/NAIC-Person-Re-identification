@@ -81,6 +81,8 @@ class CustomModel(nn.Module):
         else:
             model = getattr(pretrainedmodels, self.model_name)(pretrained='imagenet')
             model.avg_pool = torch.nn.AdaptiveAvgPool2d(output_size=(1, 1))
+            # for p in model.layer0.parameters(): p.requires_grad = False
+            # for p in model.layer1.parameters(): p.requires_grad = False
             in_features = model.last_linear.in_features
             self.feature_layer = torch.nn.Sequential(*list(model.children())[:-1])
 
@@ -106,6 +108,6 @@ class CustomModel(nn.Module):
 
 if __name__ == '__main__':
     inputs = torch.rand((64, 3, 256, 128))
-    custom_resnet = CustomModel('resnet18', last_stride=1, num_classes=2000)
+    custom_resnet = CustomModel('se_resnet50', last_stride=1, num_classes=2000)
     scores, global_features, features = custom_resnet(inputs)
     print(scores.size(), global_features.size(), features.size())

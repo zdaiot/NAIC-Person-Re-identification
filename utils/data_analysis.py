@@ -66,12 +66,19 @@ def get_folds_id(train_list_path, n_splits):
     :return valid_id_folds: 各个折的验证集id；类型为list；第i个值表示第i折的验证集id
     """
     id_numbers = dataset_statics(train_list_path)
-    train_id_pin = list()
+    train_id_pin, valid_id_pin = list(), list()
     train_valid_id = list()
     train_valid_id_number = list()
     for key, value in id_numbers.items():
-        train_valid_id.append(key)
-        train_valid_id_number.append(value)
+        if value == 1:
+            pass
+        elif value in [3, 4, 5, 7]:
+            valid_id_pin.append(key)
+        else:
+            train_id_pin.append(key)
+
+            train_valid_id.append(key)
+            train_valid_id_number.append(value)
     
     train_id_folds, valid_id_folds = list(), list()
     # 注意这里的随机种子要固定
@@ -79,9 +86,10 @@ def get_folds_id(train_list_path, n_splits):
     for train_id_fold, valid_id_fold in skf.split(train_valid_id, train_valid_id_number):
         train_id_fold, valid_id_fold = train_id_fold.tolist(), valid_id_fold.tolist()
         train_id_fold = train_id_fold + train_id_pin
+        train_id_fold = train_id_fold + train_id_pin
 
-        train_id_folds.append(train_id_fold)
-        valid_id_folds.append(valid_id_fold)
+        train_id_folds.append(train_id_pin)
+        valid_id_folds.append(valid_id_pin)
     return train_id_folds, valid_id_folds
 
 

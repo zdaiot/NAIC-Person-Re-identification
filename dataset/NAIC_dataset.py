@@ -391,7 +391,7 @@ if __name__ == "__main__":
     mean = (0.485, 0.456, 0.406)
     std = (0.229, 0.224, 0.225)
     root = 'dataset/NAIC_data/初赛训练集'
-    n_splits = 3
+    n_splits = 4
 
     train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds = \
         get_loaders(

@@ -72,6 +72,7 @@ class RandomIdentitySampler(Sampler):
         avai_pids = copy.deepcopy(self.pids)
         final_idxs = []
         # final_idxs为一个list，每batch size个数据均由 num_instances * self.num_pids_per_batch组成
+        # 下面这个判断语句会导致有几类看不到，并且导致len(final_idxs)和上面的self.length不一致
         while len(avai_pids) >= self.num_pids_per_batch:
             # 从所有类别中选中self.num_pids_per_batch
             selected_pids = random.sample(avai_pids, self.num_pids_per_batch)
