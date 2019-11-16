@@ -93,11 +93,7 @@ class Demo(object):
             assert "Not implemented :{}".format(self.dist)
 
         for query_index, query_dist in enumerate(distmat):
-            # 注意若使用的是cos_dist需要从大到小将序排列（加负号），其余为从小到大升序排列（不加负号）
-            if self.dist == 'cos_dist':
-                choose_index = np.argsort(-query_dist)[:self.num_choose]
-            else:
-                choose_index = np.argsort(query_dist)[:self.num_choose]
+            choose_index = np.argsort(query_dist)[:self.num_choose]
             query_path = query_paths[query_index]
             gallery_path = gallery_paths[choose_index]
             query_label = query_lables[query_index]
@@ -139,7 +135,7 @@ class Demo(object):
 
 
 if __name__ == "__main__":
-    demo_on_baseline =True
+    demo_on_baseline = False
     config = get_config()
     mean = (0.485, 0.456, 0.406)
     std = (0.229, 0.224, 0.225)
@@ -157,7 +153,7 @@ if __name__ == "__main__":
         mean, std
     )
 
-    for fold_index, [_, valid_loader, num_query, num_classes] in enumerate(zip(valid_dataloader_folds, num_query_folds, num_classes_folds)):
+    for fold_index, [valid_loader, num_query, num_classes] in enumerate(zip(valid_dataloader_folds, num_query_folds, num_classes_folds)):
         if fold_index not in config.selected_fold:
             continue
         num_train_classes = num_classes[0]

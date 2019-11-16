@@ -72,11 +72,7 @@ def get_folds_id(train_list_path, n_splits):
     for key, value in id_numbers.items():
         if value == 1:
             pass
-        elif value in [3, 4, 5, 7]:
-            valid_id_pin.append(key)
         else:
-            train_id_pin.append(key)
-
             train_valid_id.append(key)
             train_valid_id_number.append(value)
     
@@ -86,10 +82,10 @@ def get_folds_id(train_list_path, n_splits):
     for train_id_fold, valid_id_fold in skf.split(train_valid_id, train_valid_id_number):
         train_id_fold, valid_id_fold = train_id_fold.tolist(), valid_id_fold.tolist()
         train_id_fold = train_id_fold + train_id_pin
-        train_id_fold = train_id_fold + train_id_pin
+        valid_id_fold = valid_id_fold + valid_id_pin
 
-        train_id_folds.append(train_id_pin)
-        valid_id_folds.append(valid_id_pin)
+        train_id_folds.append(train_id_fold)
+        valid_id_folds.append(valid_id_fold)
     return train_id_folds, valid_id_folds
 
 
