@@ -1,13 +1,13 @@
-'''
+"""
 该文件的功能：实现模型的前向传播，反向传播，损失函数计算，保存模型，加载模型功能
-'''
+"""
 
 import torch
 import shutil
 import os
 
 
-class Solver():
+class Solver:
     def __init__(self, model, device):
         ''' 完成solver类的初始化
         Args:
@@ -38,32 +38,34 @@ class Solver():
 
         """
         images = images.to(self.device)
-        # 原图
-        _, _, pred_origin = self.model(images)
-        # 水平翻转
+        # 原图，outputs的最后一个数据保留可以用于行人重识别的特征
+        outputs = self.model(images)
+        pred_origin = outputs[-1]
+
+        # 水平翻转，outputs的最后一个数据保留可以用于行人重识别的特征
         images_hflp = torch.flip(images, dims=[3])
-        _, _, pred_hflip = self.model(images_hflp)
+        outputs = self.model(images_hflp)
+        pred_hflip = outputs[-1]
 
         preds = pred_origin + pred_hflip
+
         # 求平均
         # preds = preds / 2.0
-
         return preds
 
-    def cal_loss(self, predicts, features, targets, criterion):
+    def cal_loss(self, predicts, targets, criterion):
         """ 根据真实类标和预测出的类标计算损失
 
         Args:
-            predicts: 网络的预测输出，具体维度和self.model有关
-            features: 网络输出的数据的特征矩阵，具体维度和self.model有关
+            predicts: 网络的预测输出，类型为tuple，具体维度和self.model有关
             targets: 真实类标，具体维度和self.model有关
             criterion: 使用的损失函数
 
         Return:
-            loss: 计算出的损失值
+            损失函数的输出
         """
         targets = targets.to(self.device)
-        return criterion(predicts, features, targets)
+        return criterion(predicts, targets)
 
     def backword(self, optimizer, loss):
         ''' 实现网络的反向传播

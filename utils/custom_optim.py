@@ -60,7 +60,7 @@ def make_optimizer(optimizer_name, base_lr, momentum_SGD, bias_lr_factor, weight
         else:
             weight_decay = weight_decay
         params += [{"params": [value], "lr": lr, "weight_decay": weight_decay}]
-    if momentum_SGD == 'SGD':
+    if optimizer_name == 'SGD':
         optimizer = getattr(torch.optim, optimizer_name)(params, momentum=momentum_SGD, nesterov=True)
     else:
         optimizer = getattr(torch.optim, optimizer_name)(params)

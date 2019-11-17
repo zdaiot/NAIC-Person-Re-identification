@@ -1,4 +1,5 @@
 from models.baseline import Baseline
+from models.mgn import MGN
 from models.custom_model import CustomModel
 
 
@@ -23,4 +24,7 @@ def get_model(model_name, num_classes, last_stride):
     :param last_stride: 模型最后一层的步长，只能在resnet中使用；类型为int
     :return: 模型的实例
     """
-    return CustomModel(model_name, last_stride=last_stride, num_classes=num_classes)
+    if model_name == 'MGN':
+        return MGN(num_classes)
+    else:
+        return CustomModel(model_name, last_stride=last_stride, num_classes=num_classes)

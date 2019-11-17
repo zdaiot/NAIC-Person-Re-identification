@@ -12,7 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 from config import get_config
 from solver import Solver
 from models.model import build_model, get_model
-from losses.get_loss import get_loss
+from losses.get_loss import get_loss, Loss
 from dataset.NAIC_dataset import get_loaders
 from utils.set_seed import seed_torch
 from models.sync_bn.batchnorm import convert_model
@@ -64,7 +64,8 @@ class TrainVal(object):
         self.solver = Solver(self.model, self.device)
 
         # 加载损失函数
-        self.criterion = get_loss(config.selected_loss, config.margin, config.label_smooth, self.num_classes)
+        # self.criterion = get_loss(config.selected_loss, config.margin, config.label_smooth, self.num_classes)
+        self.criterion = Loss(self.model_name, config.selected_loss, config.margin, self.num_classes)
 
         # 加载优化函数以及学习率衰减策略
         if self.optimizer_name == 'Adam':
@@ -124,42 +125,41 @@ class TrainVal(object):
         for epoch in range(self.epoch):
             epoch += 1
             self.model.train()
-            images_number, epoch_corrects, epoch_loss = 0, 0, 0
+            images_number, epoch_corrects = 0, 0
+
             tbar = tqdm.tqdm(train_loader)
             for i, (images, labels) in enumerate(tbar):
                 # 网络的前向传播与反向传播
-                labels_predict, global_features, _ = self.solver.forward(images)
-                loss = self.solver.cal_loss(labels_predict, global_features, labels, self.criterion)
+                outputs = self.solver.forward(images)
+                loss = self.solver.cal_loss(outputs, labels, self.criterion)
                 self.solver.backword(self.optim, loss)
 
-                epoch_loss += loss.item() * images.size(0)
                 images_number += images.size(0)
-                epoch_corrects += (labels_predict.max(1)[1] == labels.to(self.device)).float().sum()
-                train_acc_iteration = (labels_predict.max(1)[1] == labels.to(self.device)).float().mean()
+                epoch_corrects += self.model.module.get_classify_result(outputs, labels, self.device).sum()
+                train_acc_iteration = self.model.module.get_classify_result(outputs, labels, self.device).mean() * 100
 
                 # 保存到tensorboard，每一步存储一个
-                self.writer.add_scalar('train_loss_iteration', loss.item(), global_step + i)
-                self.writer.add_scalar('train_acc_iteration', train_acc_iteration.item() * 100, global_step + i)
+                descript = self.criterion.record_loss_iteration(self.writer.add_scalar, global_step + i)
+                self.writer.add_scalar('train_acc_iteration', train_acc_iteration, global_step + i)
 
-                descript = "Fold: %d, Train Loss: %.7f, Train Acc :%.2f, Lr :%.7f" % (self.fold, loss.item(),
-                                                                                      train_acc_iteration * 100,
-                                                                                      self.scheduler.get_lr()[0])
+                descript = '[Train][epoch: {}/{}][Lr :{:.7f}][Acc: {:.2%}]'.format(epoch, self.epoch,
+                                                                               self.scheduler.get_lr()[0],
+                                                                               train_acc_iteration) + descript
                 tbar.set_description(desc=descript)
 
             # 每一个epoch完毕之后，执行学习率衰减
             self.scheduler.step()
             global_step += len(train_loader)
 
-            epoch_loss = epoch_loss / images_number
+            # 写到tensorboard中
             epoch_acc = epoch_corrects / images_number
-            self.writer.add_scalar('lr', self.scheduler.get_lr()[0], epoch)
-            self.writer.add_scalar('train_loss_epoch', epoch_loss, epoch)
             self.writer.add_scalar('train_acc_epoch', epoch_acc * 100, epoch)
+            self.writer.add_scalar('lr', self.scheduler.get_lr()[0], epoch)
+            descript = self.criterion.record_loss_epoch(len(train_loader), self.writer.add_scalar, epoch)
 
             # Print the log info
-            print('Finish Epoch [%d/%d], Average Loss: %.7f, Average Acc: %.2f' % (epoch, self.epoch,
-                                                                                   epoch_loss,
-                                                                                   epoch_acc * 100))
+            print('[Finish epoch: {}/{}][Average Acc: {:.2%}]'.format(epoch, self.epoch, epoch_acc * 100) + descript)
+
             # 验证模型
             rank1, mAP, average_score = self.validation(valid_loader)
 
@@ -195,7 +195,7 @@ class TrainVal(object):
         with torch.no_grad():
             for i, (images, labels, paths) in enumerate(tbar):
                 # 完成网络的前向传播
-                # labels_predict, global_features, features = self.solver.forward(images)
+                # features = self.solver.forward(images)[-1]
                 features = self.solver.tta(images)
                 features_all.append(features.detach().cpu())
                 labels_all.append(labels)

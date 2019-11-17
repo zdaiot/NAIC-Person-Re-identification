@@ -105,6 +105,9 @@ class CustomModel(nn.Module):
         scores, features = self.classifier(global_features)
         return scores, global_features, features
 
+    def get_classify_result(self, outputs, labels, device):
+        return (outputs[0].max(1)[1] == labels.to(device)).float()
+
 
 if __name__ == '__main__':
     inputs = torch.rand((64, 3, 256, 128))

@@ -106,19 +106,20 @@ def hard_example_mining(dist_mat, labels, return_inds=False):
     return dist_ap, dist_an
 
 
-class TripletLoss(object):
+class TripletLoss(nn.Module):
     """Modified from Tong Xiao's open-reid (https://github.com/Cysu/open-reid).
     Related Triplet Loss theory can be found in paper 'In Defense of the Triplet
     Loss for Person Re-Identification'."""
 
     def __init__(self, margin=None):
+        super(TripletLoss, self).__init__()
         self.margin = margin
         if margin is not None:
             self.ranking_loss = nn.MarginRankingLoss(margin=margin)
         else:
             self.ranking_loss = nn.SoftMarginLoss()
 
-    def __call__(self, global_feat, labels, normalize_feature=False):
+    def forward(self, global_feat, labels, normalize_feature=False):
         """
 
         :param global_feat: batch个样本的feature；类型为tensor；维度为[batch_size, feature_dim]
@@ -174,7 +175,7 @@ class CrossEntropyLabelSmooth(nn.Module):
         if self.use_gpu:
             targets = targets.cuda()
         targets = (1 - self.epsilon) * targets + self.epsilon / self.num_classes
-        # mean(0)表示缩减第0维，也就是按列求均值，最终维度为[num_classes]，得到该batch内每一个类别的损失，再求和
+        # mean(0)表示缩减第0维，也就是按列求均值，得到维度为[num_classes]，得到该batch内每一个类别的损失，再求和
         loss = (- targets * log_probs).mean(0).sum()
         return loss
 

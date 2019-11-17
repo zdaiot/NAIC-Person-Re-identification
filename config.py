@@ -13,7 +13,7 @@ def get_config():
     else:
         parser = argparse.ArgumentParser()
         # model hyper-parameters
-        parser.add_argument('--batch_size', type=int, default=128, help='batch size')
+        parser.add_argument('--batch_size', type=int, default=64, help='batch size')
         parser.add_argument('--num_instances', type=int, default=4,
                             help='num_instances for each class, only use in train_dataloader')
         parser.add_argument('--epoch', type=int, default=60, help='epoch')
@@ -31,18 +31,18 @@ def get_config():
         parser.add_argument('--use_amplify', type=bool, default=False, help='Data extension of training data set')
 
         # model set 
-        parser.add_argument('--model_name', type=str, default='se_resnet50',
-                            help='resnet50/resnet34/resnet101/resnet152/se_resnet50')
+        parser.add_argument('--model_name', type=str, default='mgn',
+                            help='resnet50/resnet34/resnet101/resnet152/se_resnet50/mgn')
         parser.add_argument('--last_stride', type=int, default=1, help='last stride in the resnet model')
 
         # loss set
-        parser.add_argument('--selected_loss', type=str, default='softmax_triplet',
+        parser.add_argument('--selected_loss', type=str, default='1*CrossEntropy+2*Triplet',
                             help='Select the loss function, softmax_triplet/softmax/triplet')
         parser.add_argument('--margin', type=float, default=0.3, help='margin coefficient in triplet loss')
         parser.add_argument('--label_smooth', type=bool, default=False, help='use label smooth in cross entropy')
 
         # 优化器设置
-        parser.add_argument('--optimizer_name', type=str, default='SGD',
+        parser.add_argument('--optimizer_name', type=str, default='author',
                             help='which optimizer to use, Adam/SGD/author')
         parser.add_argument('--momentum_SGD', type=float, default=0.9, help='momentum in SGD')
         parser.add_argument('--base_lr', type=float, default=5e-2, help='init lr')
@@ -53,7 +53,7 @@ def get_config():
                             help='only use when optimizer_name=author, weight_decay for bias')
 
         # 学习率衰减策略
-        parser.add_argument('--scheduler_name', type=str, default='StepLR',
+        parser.add_argument('--scheduler_name', type=str, default='COS',
                             help='which scheduler to use, StepLR/COS/author')
         # 设置WarmupMultiStepLR, 只有当scheduler_name=author时下面参数才有作用
         parser.add_argument('--steps', type=list, default=[20, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195,
