@@ -16,7 +16,7 @@ def get_config():
         parser.add_argument('--batch_size', type=int, default=64, help='batch size')
         parser.add_argument('--num_instances', type=int, default=4,
                             help='num_instances for each class, only use in train_dataloader')
-        parser.add_argument('--epoch', type=int, default=60, help='epoch')
+        parser.add_argument('--epoch', type=int, default=150, help='epoch')
         parser.add_argument('--num_workers', type=int, default=8)
         parser.add_argument('--selected_fold', type=list, default=[0], help='what folds for training?')
 
@@ -31,8 +31,8 @@ def get_config():
         parser.add_argument('--use_amplify', type=bool, default=False, help='Data extension of training data set')
 
         # model set 
-        parser.add_argument('--model_name', type=str, default='mgn',
-                            help='resnet50/resnet34/resnet101/resnet152/se_resnet50/mgn')
+        parser.add_argument('--model_name', type=str, default='MGN',
+                            help='resnet50/resnet34/resnet101/resnet152/se_resnet50/MGN')
         parser.add_argument('--last_stride', type=int, default=1, help='last stride in the resnet model')
 
         # loss set
