@@ -16,7 +16,7 @@ def get_config():
         parser.add_argument('--batch_size', type=int, default=64, help='batch size')
         parser.add_argument('--num_instances', type=int, default=4,
                             help='num_instances for each class, only use in train_dataloader')
-        parser.add_argument('--epoch', type=int, default=60, help='epoch')
+        parser.add_argument('--epoch', type=int, default=80, help='epoch')
         parser.add_argument('--num_workers', type=int, default=8)
         parser.add_argument('--selected_fold', type=list, default=[0], help='what folds for training?')
 
@@ -31,7 +31,7 @@ def get_config():
         parser.add_argument('--use_amplify', type=bool, default=False, help='Data extension of training data set')
 
         # model set 
-        parser.add_argument('--model_name', type=str, default='MGN',
+        parser.add_argument('--model_name', type=str, default='resnet50',
                             help='resnet50/resnet34/resnet101/resnet152/se_resnet50/MGN')
         parser.add_argument('--last_stride', type=int, default=1, help='last stride in the resnet model')
 
@@ -42,7 +42,7 @@ def get_config():
         parser.add_argument('--label_smooth', type=bool, default=False, help='use label smooth in cross entropy')
 
         # 优化器设置
-        parser.add_argument('--optimizer_name', type=str, default='author',
+        parser.add_argument('--optimizer_name', type=str, default='Adam',
                             help='which optimizer to use, Adam/SGD/author')
         parser.add_argument('--momentum_SGD', type=float, default=0.9, help='momentum in SGD')
         parser.add_argument('--base_lr', type=float, default=1e-4, help='init lr')
@@ -53,8 +53,10 @@ def get_config():
                             help='only use when optimizer_name=author, weight_decay for bias')
 
         # 学习率衰减策略
-        parser.add_argument('--scheduler_name', type=str, default='author',
+        parser.add_argument('--scheduler_name', type=str, default='COS',
                             help='which scheduler to use, StepLR/COS/author')
+        parser.add_argument('--cos_max', type=int, default=20, help='use in CosineAnnealingLR')
+        parser.add_argument('--step', type=int, default=20, help='use in StepLR')
         # 设置WarmupMultiStepLR, 只有当scheduler_name=author时下面参数才有作用
         parser.add_argument('--steps', type=list, default=[20, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195,
                                                            210, 225, 240, 255], help='')

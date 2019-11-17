@@ -67,7 +67,7 @@ class TrainVal(object):
         # self.criterion = get_loss(config.selected_loss, config.margin, config.label_smooth, self.num_classes)
         self.criterion = Loss(self.model_name, config.selected_loss, config.margin, self.num_classes)
 
-        # 加载优化函数以及学习率衰减策略
+        # 加载优化函数
         if self.optimizer_name == 'Adam':
             # self.optim = optim.Adam(self.model.module.parameters(), config.base_lr, weight_decay=config.weight_decay)
             self.optim = optim.Adam(
@@ -84,10 +84,11 @@ class TrainVal(object):
                                         config.bias_lr_factor,
                                         config.weight_decay, config.weight_decay_bias, self.model, self.num_gpus)
 
+        # 加载学习率衰减策略
         if self.scheduler_name == 'StepLR':
-            self.scheduler = optim.lr_scheduler.StepLR(self.optim, step_size=40, gamma=0.1)
+            self.scheduler = optim.lr_scheduler.StepLR(self.optim, step_size=config.step, gamma=0.1)
         elif self.scheduler_name == 'COS':
-            self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optim, self.epoch + 10)
+            self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optim, T_max=config.cos_max, eta_min=1e-8)
         elif self.scheduler_name == 'author':
             self.scheduler = WarmupMultiStepLR(self.optim, config.steps, config.gamma, config.warmup_factor,
                                                config.warmup_iters, config.warmup_method)
