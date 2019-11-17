@@ -125,10 +125,10 @@ class TrainVal(object):
         for epoch in range(self.epoch):
             epoch += 1
             self.model.train()
-            images_number, epoch_corrects = 0, 0
+            images_number, epoch_corrects, index = 0, 0, 0
 
             tbar = tqdm.tqdm(train_loader)
-            for i, (images, labels) in enumerate(tbar):
+            for index, (images, labels) in enumerate(tbar):
                 # 网络的前向传播与反向传播
                 outputs = self.solver.forward(images)
                 loss = self.solver.cal_loss(outputs, labels, self.criterion)
@@ -139,26 +139,26 @@ class TrainVal(object):
                 train_acc_iteration = self.model.module.get_classify_result(outputs, labels, self.device).mean() * 100
 
                 # 保存到tensorboard，每一步存储一个
-                descript = self.criterion.record_loss_iteration(self.writer.add_scalar, global_step + i)
-                self.writer.add_scalar('train_acc_iteration', train_acc_iteration, global_step + i)
+                global_step += 1
+                descript = self.criterion.record_loss_iteration(self.writer.add_scalar, global_step)
+                self.writer.add_scalar('TrainAccIteration', train_acc_iteration, global_step)
 
-                descript = '[Train][epoch: {}/{}][Lr :{:.7f}][Acc: {:.2%}]'.format(epoch, self.epoch,
+                descript = '[Train][epoch: {}/{}][Lr :{:.7f}][Acc: {:.2f}]'.format(epoch, self.epoch,
                                                                                self.scheduler.get_lr()[0],
                                                                                train_acc_iteration) + descript
                 tbar.set_description(desc=descript)
 
             # 每一个epoch完毕之后，执行学习率衰减
             self.scheduler.step()
-            global_step += len(train_loader)
 
             # 写到tensorboard中
-            epoch_acc = epoch_corrects / images_number
-            self.writer.add_scalar('train_acc_epoch', epoch_acc * 100, epoch)
-            self.writer.add_scalar('lr', self.scheduler.get_lr()[0], epoch)
-            descript = self.criterion.record_loss_epoch(len(train_loader), self.writer.add_scalar, epoch)
+            epoch_acc = epoch_corrects / images_number * 100
+            self.writer.add_scalar('TrainAccEpoch', epoch_acc, epoch)
+            self.writer.add_scalar('Lr', self.scheduler.get_lr()[0], epoch)
+            descript = self.criterion.record_loss_epoch(index, self.writer.add_scalar, epoch)
 
             # Print the log info
-            print('[Finish epoch: {}/{}][Average Acc: {:.2%}]'.format(epoch, self.epoch, epoch_acc * 100) + descript)
+            print('[Finish epoch: {}/{}][Average Acc: {:.2}]'.format(epoch, self.epoch, epoch_acc) + descript)
 
             # 验证模型
             rank1, mAP, average_score = self.validation(valid_loader)
@@ -177,9 +177,9 @@ class TrainVal(object):
 
             self.solver.save_checkpoint(
                 os.path.join(self.model_path, '{}_fold{}.pth'.format(self.model_name, self.fold)), state, is_best)
-            self.writer.add_scalar('rank1', rank1, epoch)
-            self.writer.add_scalar('mAP', mAP, epoch)
-            self.writer.add_scalar('average_score', average_score, epoch)
+            self.writer.add_scalar('Rank1', rank1, epoch)
+            self.writer.add_scalar('MAP', mAP, epoch)
+            self.writer.add_scalar('AverageScore', average_score, epoch)
 
     def validation(self, valid_loader):
         """ 完成模型的验证过程

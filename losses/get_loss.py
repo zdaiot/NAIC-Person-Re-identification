@@ -36,7 +36,7 @@ def get_loss(selected_loss, margin, label_smooth, num_classes):
     return loss_func
 
 
-class Loss(nn.modules.loss._Loss):
+class Loss(nn.Module):
     def __init__(self, model_name, loss_name, margin, num_classes):
         super(Loss, self).__init__()
         self.model_name = model_name
@@ -107,7 +107,7 @@ class Loss(nn.modules.loss._Loss):
                 losses.append(effective_loss)
                 self.log[i] = effective_loss.item()
                 self.log_sum[i] += self.log[i]
-            elif self.model_name == 'MGN' and l['type'] in ['CrossEntropy', 'SmoothCrossEntropy']:
+            elif self.model_name != 'MGN' and l['type'] in ['CrossEntropy', 'SmoothCrossEntropy']:
                 loss = l['function'](outputs[0], labels)
                 effective_loss = l['weight'] * loss
                 losses.append(effective_loss)
@@ -121,7 +121,7 @@ class Loss(nn.modules.loss._Loss):
         loss_sum = sum(losses)
         if len(self.loss_struct) > 1:
             self.log[-1] = loss_sum.item()
-            self.log_sum[-1] = loss_sum.item()
+            self.log_sum[-1] += loss_sum.item()
 
         return loss_sum
 
@@ -129,7 +129,7 @@ class Loss(nn.modules.loss._Loss):
         descript = []
         for l, each_loss in zip(self.loss_struct, self.log):
             if writer_function:
-                writer_function(l['type'] + 'iteration', each_loss, global_step)
+                writer_function(l['type'] + 'Iteration', each_loss, global_step)
             descript.append('[{}: {:.4f}]'.format(l['type'], each_loss))
         return ''.join(descript)
 
@@ -137,7 +137,7 @@ class Loss(nn.modules.loss._Loss):
         descript = []
         for l, each_loss in zip(self.loss_struct, self.log_sum):
             if writer_function:
-                writer_function(l['type'] + 'epoch', each_loss/num_iterations, global_step)
+                writer_function(l['type'] + 'Epoch', each_loss/num_iterations, global_step)
             descript.append('[Average {}: {:.4f}]'.format(l['type'], each_loss/num_iterations))
 
         # 注意要把 self.log_sum清零

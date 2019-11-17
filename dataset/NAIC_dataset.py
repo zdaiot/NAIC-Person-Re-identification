@@ -63,7 +63,6 @@ class TrainDataset(Dataset):
             T.Resize((256, 128), interpolation=3),
             T.Pad(10),
             T.RandomCrop((256, 128)),
-            T.RandomHorizontalFlip(),
             T.ToTensor(),
             T.Normalize(self.mean, self.std)
         ]
