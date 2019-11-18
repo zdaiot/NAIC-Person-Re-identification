@@ -126,19 +126,20 @@ class TripletLoss(nn.Module):
         :param labels: ground truth labels with shape (num_classes)
         :param normalize_feature: 是否对每个样本的feature做正则归一化；类型为bool
         :return loss: 计算出的loss值
-        :return dist_ap第i个值：在与第i个样本类别相同的样本中取出距离最远的距离值；类型为tensor；维度为[batch_size]
-        :return dist_an第i个值：在与第i个样本类别不同的样本中取出距离最近的距离值；类型为tensor；维度为[batch_size]
+
         """
         if normalize_feature:
             global_feat = normalize(global_feat, axis=-1)
         dist_mat = euclidean_dist(global_feat, global_feat)
+        # dist_ap第i个值：在与第i个样本类别相同的样本中取出距离最远的距离值；类型为tensor；维度为[batch_size]
+        # dist_an第i个值：在与第i个样本类别不同的样本中取出距离最近的距离值；类型为tensor；维度为[batch_size]
         dist_ap, dist_an = hard_example_mining(dist_mat, labels)
         y = dist_an.new().resize_as_(dist_an).fill_(1)
         if self.margin is not None:
             loss = self.ranking_loss(dist_an, dist_ap, y)
         else:
             loss = self.ranking_loss(dist_an - dist_ap, y)
-        return loss, dist_ap, dist_an
+        return loss
 
 
 class CrossEntropyLabelSmooth(nn.Module):

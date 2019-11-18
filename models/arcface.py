@@ -3,7 +3,6 @@ import torch.nn as nn
 import math
 import torch.nn.functional as F
 from torch.nn import *
-from models.utils import *
 
 
 def l2_norm(input, axis=1):
@@ -12,6 +11,7 @@ def l2_norm(input, axis=1):
     return output
 
 
+# see https://github.com/SeuTao/Humpback-Whale-Identification-Challenge-2019_2nd_palce_solution/blob/master/net/MagrinLinear.py
 class Arcface(Module):
     # implementation of additive margin softmax loss in https://arxiv.org/abs/1801.05599
     def __init__(self, embedding_size=512, classnum=51332, s=64., m=0.5):
@@ -28,6 +28,7 @@ class Arcface(Module):
         self.threshold = math.cos(math.pi - m)
 
     def forward(self, embbedings, label):
+        embbedings = l2_norm(embbedings)  # 这行代码自己添加的
         # weights norm
         nB = len(embbedings)
         kernel_norm = l2_norm(self.kernel, axis=0)
@@ -88,6 +89,7 @@ class wnfc(Module):
         return output
 
 
+# see https://github.com/lulujianjie/person-reid-tiny-baseline for more information
 class ArcCos(nn.Module):
     def __init__(self, in_features, out_features, s=30.0, m=0.50, bias=False):
         super(ArcCos, self).__init__()
@@ -115,8 +117,8 @@ class ArcCos(nn.Module):
             bound = 1 / math.sqrt(fan_in)
             nn.init.uniform_(self.bias, -bound, bound)
 
-    def forward(self, predict_label, ture_label):
-        cosine = F.linear(F.normalize(predict_label), F.normalize(self.weight))
+    def forward(self, features, ture_label):
+        cosine = F.linear(F.normalize(features), F.normalize(self.weight))
         sine = torch.sqrt((1.0 - torch.pow(cosine, 2)).clamp(0, 1))
         phi = cosine * self.cos_m - sine * self.sin_m
         phi = torch.where(cosine > self.th, phi, cosine - self.mm)

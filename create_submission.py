@@ -147,8 +147,15 @@ if __name__ == "__main__":
 
     if test_baseline:
         # 测试baseline
-        _, num_train_classes = get_baseline_loader(train_dataset_root, config.batch_size, config.num_workers,
-                                                        True, mean, std)
+        _, num_train_classes = get_baseline_loader(
+            train_dataset_root,
+            config.batch_size,
+            config.num_instances,
+            config.num_workers,
+            config.augmentation_flag,
+            config.erase_prob,
+            config.gray_prob,
+            mean, std)
         pth_path = os.path.join(config.save_path, config.model_name, '{}.pth'.format(config.model_name))
         create_submission = CreateSubmission(config, num_train_classes, pth_path, test_dataloader, num_query)
         create_submission.get_result(show=False)

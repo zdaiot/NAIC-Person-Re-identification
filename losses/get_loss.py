@@ -59,7 +59,7 @@ class Loss(nn.Module):
         for i, l in enumerate(self.loss_struct):
             # 处理MGN网络的损失计算
             if self.model_name == 'MGN' and l['type'] == 'Triplet':
-                loss = [l['function'](output, labels)[0] for output in outputs[8:11]]
+                loss = [l['function'](output, labels) for output in outputs[8:11]]
                 loss = sum(loss) / len(loss)
                 effective_loss = l['weight'] * loss
                 losses.append(effective_loss)
@@ -75,7 +75,7 @@ class Loss(nn.Module):
 
             # 处理其它网络的损失计算
             elif self.model_name != 'MGN' and l['type'] == 'Triplet':
-                loss = l['function'](outputs[1], labels)[0]
+                loss = l['function'](outputs[1], labels)
                 effective_loss = l['weight'] * loss
                 losses.append(effective_loss)
                 self.log[i] = effective_loss.item()

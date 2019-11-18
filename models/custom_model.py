@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import pretrainedmodels
 from models.weights_init import weights_init_kaiming_another, weights_init_classifier_another
+from models.arcface import Arcface
 
 
 class ClassBlock(nn.Module):
@@ -85,11 +86,14 @@ class CustomModel(nn.Module):
             # for p in model.layer1.parameters(): p.requires_grad = False
             in_features = model.last_linear.in_features
             self.feature_layer = torch.nn.Sequential(*list(model.children())[:-1])
-        # self.bottleneck = torch.nn.BatchNorm1d(in_features, eps=1e-05, momentum=0.1)
-        # self.fc = torch.nn.Linear(in_features=in_features, out_features=self.num_classes, bias=False)
-        self.classifier = ClassBlock(in_features, self.num_classes, droprate=0.5, return_f=True)
 
-    def forward(self, x):
+        # self.classifier = ClassBlock(in_features, self.num_classes, droprate=0.5, return_f=True)
+
+        self.bottleneck = torch.nn.BatchNorm1d(in_features, eps=1e-05, momentum=0.1)
+        self.bottleneck.bias.requires_grad_(False)
+        self.classifier = Arcface(in_features, self.num_classes)
+
+    def forward(self, x, labels):
         """
 
         :param x: 网络的输入；类型为tensor；维度为[batch_size, channel, height, width]
@@ -99,9 +103,11 @@ class CustomModel(nn.Module):
         """
         global_features = self.feature_layer(x)
         global_features = global_features.view(global_features.shape[0], -1)
-        # features = self.bottleneck(global_features)
-        # scores = self.fc(features)
-        scores, features = self.classifier(global_features)
+
+        # scores, features = self.classifier(global_features)
+
+        features = self.bottleneck(global_features)
+        scores = self.classifier(features, labels)
         return scores, global_features, features
 
     def get_classify_result(self, outputs, labels, device):

@@ -38,7 +38,7 @@ def get_config():
 
         # loss set
         parser.add_argument('--selected_loss', type=str, default='1*CrossEntropy+1*Triplet',
-                            help='Select the loss function, softmax_triplet/softmax/triplet')
+                            help='Select the loss function, CrossEntropy/SmoothCrossEntropy/Triplet')
         parser.add_argument('--margin', type=float, default=0.3, help='margin coefficient in triplet loss')
 
         # 优化器设置

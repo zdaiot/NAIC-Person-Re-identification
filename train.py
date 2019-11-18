@@ -107,7 +107,7 @@ class TrainVal(object):
             tbar = tqdm.tqdm(train_loader)
             for index, (images, labels) in enumerate(tbar):
                 # 网络的前向传播与反向传播
-                outputs = self.solver.forward(images)
+                outputs = self.solver.forward((images, labels))
                 loss = self.solver.cal_loss(outputs, labels, self.criterion)
                 self.solver.backword(self.optim, loss)
 
@@ -172,8 +172,8 @@ class TrainVal(object):
         with torch.no_grad():
             for i, (images, labels, paths) in enumerate(tbar):
                 # 完成网络的前向传播
-                # features = self.solver.forward(images)[-1]
-                features = self.solver.tta(images)
+                # features = self.solver.forward((images, labels))[-1]
+                features = self.solver.tta((images, labels))
                 features_all.append(features.detach().cpu())
                 labels_all.append(labels)
 

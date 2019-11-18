@@ -16,35 +16,42 @@ class Solver:
         self.model = model
         self.device = device
 
-    def forward(self, images):
+    def forward(self, inputs):
         """ 实现网络的前向传播功能
 
         Args:
-            inputs: 网络的输入；类型为tensor；具体维度和模型有关
+            inputs: 网络的输入；类型为tuple；具体维度和模型有关
 
         Return:
             outputs: 网络的输出，具体维度和含义与self.model有关
         """
-        images = images.to(self.device)
-        outputs = self.model(images)
+        inputs = list(inputs)
+        for index, x in enumerate(inputs):
+            inputs[index] = x.to(self.device)
+        inputs = tuple(inputs)
+        outputs = self.model(*inputs)
         return outputs
 
-    def tta(self, images):
+    def tta(self, inputs):
         """测试时数据增强
 
         Args:
-            images: [batch_size, channel, height, width]
+            inputs: 网络的输入；类型为tuple；具体维度和模型有关
         Return:
-
+            preds: 经过tta后的输出
         """
-        images = images.to(self.device)
+        inputs = list(inputs)
+        for index, x in enumerate(inputs):
+            inputs[index] = x.to(self.device)
+        inputs = tuple(inputs)
+
         # 原图，outputs的最后一个数据保留可以用于行人重识别的特征
-        outputs = self.model(images)
+        outputs = self.model(*inputs)
         pred_origin = outputs[-1]
 
         # 水平翻转，outputs的最后一个数据保留可以用于行人重识别的特征
-        images_hflp = torch.flip(images, dims=[3])
-        outputs = self.model(images_hflp)
+        images_hflp = torch.flip(inputs[0], dims=[3])
+        outputs = self.model(*(images_hflp, inputs[1]))
         pred_hflip = outputs[-1]
 
         preds = pred_origin + pred_hflip

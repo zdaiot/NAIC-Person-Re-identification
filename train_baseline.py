@@ -92,7 +92,7 @@ class TrainBaseline(object):
             tbar = tqdm.tqdm(train_loader)
             for index, (images, labels) in enumerate(tbar):
                 # 网络的前向传播与反向传播
-                outputs = self.solver.forward(images)
+                outputs = self.solver.forward((images, labels))
                 loss = self.solver.cal_loss(outputs, labels, self.criterion)
                 self.solver.backword(self.optim, loss)
 

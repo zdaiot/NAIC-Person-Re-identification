@@ -4,6 +4,7 @@ from torch import nn
 from torchvision.models.resnet import resnet50, Bottleneck
 
 
+# TODO Not support Arcface
 class MGN(nn.Module):
     def __init__(self, num_classes, pool='avg', feats=256):
         """
@@ -103,10 +104,11 @@ class MGN(nn.Module):
         # nn.init.normal_(fc.weight, std=0.001)
         nn.init.constant_(fc.bias, 0.)
 
-    def forward(self, x):
+    def forward(self, x, labels):
         """
 
         :param x: 网络的输入
+        :param labels: 未使用
         :return l_p1, l_p2, l_p3, l0_p2, l1_p2, l0_p3, l1_p3, l2_p3: 网络的预测类别，类型为tensor；每个的维度均为[batch_size, num_classes]
         :return fg_p1, fg_p2, fg_p3: 网络预测特征；类型为tensor；每个的维度均为[batch_size, feats]
         :return predict: 可以用于行人重识别的特征；类型为tensor；维度为[batch_size, 8*feats]
