@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
+import matplotlib
 import os
+import numpy as np
 from PIL import Image
 from sklearn.model_selection import KFold, StratifiedKFold
 import random
@@ -39,8 +41,8 @@ def id_numbers_statics(id_numbers):
     for number_statics in numbers_statics_sort:
         x.append(number_statics[0])
         y.append(number_statics[1])
-    
-    ax1=plt.subplot(111)
+
+    ax1 = plt.subplot(111)
     x_axis = range(len(x))
     rects = ax1.bar(x=x_axis, height=y, width=0.8, label='ID Number')
     plt.ylabel('ID Number')
@@ -51,7 +53,7 @@ def id_numbers_statics(id_numbers):
 
     for rect in rects:
         height = rect.get_height()
-        plt.text(rect.get_x() + rect.get_width() / 2, height+1, str(height), ha="center", va="bottom")
+        plt.text(rect.get_x() + rect.get_width() / 2, height + 1, str(height), ha="center", va="bottom")
 
     plt.show()
 
@@ -70,12 +72,12 @@ def get_folds_id(train_list_path, n_splits):
     train_valid_id = list()
     train_valid_id_number = list()
     for key, value in id_numbers.items():
-        if value == 1:
+        if value in [1, 864, 1018]:
             pass
         else:
             train_valid_id.append(key)
             train_valid_id_number.append(value)
-    
+
     train_id_folds, valid_id_folds = list(), list()
     # 注意这里的随机种子要固定
     skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=1)
@@ -94,8 +96,14 @@ def get_all_id(train_list_path):
     :param train_list_path: 存储全部数据集对应的id的txt文件；类型为str
     :return: 所有数据集的类别
     """
+    train_id = list()
     id_numbers = dataset_statics(train_list_path)
-    return id_numbers.keys()
+    for key, value in id_numbers.items():
+        if value in [1, 864, 1018]:
+            pass
+        else:
+            train_id.append(key)
+    return train_id
 
 
 def demo_id(id, number, number_of_ids, data_dir, sample_id_txt, ids_samples):
@@ -115,15 +123,21 @@ def demo_id(id, number, number_of_ids, data_dir, sample_id_txt, ids_samples):
         show_number = number_of_id
     else:
         show_number = number
-    
+
     samples = ids_samples[id]
     samples_selected = random.sample(samples, show_number)
-    plt.figure(str(id))
+    if show_number < 10:
+        number_per_line = show_number
+    else:
+        number_per_line = 10
+    lines = (show_number + 10) / 10
     for index, sample_name in enumerate(samples_selected):
         sample_path = os.path.join(data_dir, sample_name)
         image = Image.open(sample_path)
-        plt.subplot(1, show_number, index + 1)
+        plt.subplot(lines, number_per_line, index + 1)
         plt.imshow(image)
+    mng = plt.get_current_fig_manager()
+    mng.window.showMaximized()
     plt.show()
 
 
@@ -146,22 +160,35 @@ def get_ids_samples(sample_id_txt):
                 ids_samples[sample_id] = []
                 ids_samples[sample_id].append(sample_name)
             watched_id.add(sample_id)
-    
+
     return ids_samples
 
 
-if __name__ == '__main__':
-    train_list_path = 'data/Uaic/train_amplify/amplify_id.txt'
-    train_data_dir = 'data/Uaic/train_amplify/images'
-    id_numbers = dataset_statics(train_list_path)
-    # print(id_numbers)
+def image_channels_statistics(images_path):
+    images_list = os.listdir(images_path)
+    for image_name in images_list:
+        image_path = os.path.join(images_path, image_name)
+        image = Image.open(image_path).convert('RGB')
+        image = np.asarray(image)
+        print(image)
 
+
+if __name__ == '__main__':
+    train_list_path = 'data/Uaic/初赛训练集/初赛训练集/train_list.txt'
+    train_data_dir = 'data/Uaic/初赛训练集/初赛训练集/train_set'
+    id_numbers = dataset_statics(train_list_path)
+    show_id = []
+    show_number = 864
+    for (id, number) in id_numbers.items():
+        if number == show_number:
+            show_id.append(id)
+    # image_channels_statistics(train_data_dir)
     numbers_statics = id_numbers_statics(id_numbers)
     print(numbers_statics)
 
-    train_id_folds, valid_id_folds = get_folds_id(train_list_path, 3)
+    # train_id_folds, valid_id_folds = get_folds_id(train_list_path, 3)
 
     ids_samples = get_ids_samples(train_list_path)
-    ids = [1, 100, 1000, 350, 487, 3000, 375]
+    ids = show_id
     for id in ids:
-        demo_id(id, 10, id_numbers, train_data_dir, train_list_path, ids_samples)
+        demo_id(id, 8, id_numbers, train_data_dir, train_list_path, ids_samples)

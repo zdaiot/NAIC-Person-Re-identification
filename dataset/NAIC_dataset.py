@@ -326,13 +326,17 @@ def get_loaders(root, n_splits, batch_size, num_instances, num_works, augmentati
     return train_dataloader_folds, valid_dataloader_folds, num_query_folds, num_classes_folds
 
 
-def get_baseline_loader(root, batch_size, num_works, shuffle_train, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
+def get_baseline_loader(root, batch_size, num_instances, num_works, augmentation_flag, erase_prob, gray_prob,
+                        mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
     """ 获得训练集的Dataloader，以及总的类别数
 
     :param root: 训练数据集的根目录；类型为str
     :param batch_size: batch的大小；类型为int
+    :param num_instances: 每一类选取多少个数据；类型为int
     :param num_works: 读取数据时的线程数；类型为int
-    :param shuffle_train: 是否打乱训练集；类型为bool
+    :param augmentation_flag: 是否对训练集进行额外的数据增强；类型为bool
+    :param erase_prob: 数据增强中随机擦除的概率；类型为float
+    :param gray_prob: 数据增强中转为灰度图的概率；类型为float
     :param mean: 每个通道的均值；类型为tuple
     :param std: 每个通道的方差；类型为tuple
     :return train_dataloader: 训练集的Dataloader；
@@ -345,9 +349,9 @@ def get_baseline_loader(root, batch_size, num_works, shuffle_train, mean=(0.485,
         root=root_pic,
         train_list_txt_path=train_list_txt_path,
         train_id=train_id,
-        augmentation_flag=False,
-        erase_prob=0,
-        gray_prob=0,
+        augmentation_flag=augmentation_flag,
+        erase_prob=erase_prob,
+        gray_prob=gray_prob,
         mean=mean, std=std
     )
 
@@ -356,7 +360,7 @@ def get_baseline_loader(root, batch_size, num_works, shuffle_train, mean=(0.485,
         batch_size=batch_size,
         num_workers=num_works,
         pin_memory=True,
-        shuffle=shuffle_train
+        sampler=RandomIdentitySampler(train_dataset.samples_list, batch_size, num_instances),
     )
     num_classes = len(train_id)
     return train_dataloader, num_classes

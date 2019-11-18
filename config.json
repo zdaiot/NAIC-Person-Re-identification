@@ -22,7 +22,7 @@
   },
 
   "Cosine": {
-    "restart_step": 20,
+    "restart_step": 40,
     "eta_min": 1e-8
   },
 
