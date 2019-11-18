@@ -1,0 +1,41 @@
+{
+  "base_lr": 1e-4,
+  "weight_decay": 5e-4,
+
+  "SGD": {
+    "momentum": 0.9
+  },
+
+  "SGD_bias": {
+    "bias_lr_factor": 1,
+    "weight_decay_bias": 0.0,
+    "momentum": 0.9
+  },
+
+  "Adam": {
+  },
+
+  "Adam_bias":{
+    "bias_lr_factor": 1,
+    "weight_decay_bias": 0.0,
+    "momentum": 0.9
+  },
+
+  "Cosine": {
+    "restart_step": 20,
+    "eta_min": 1e-8
+  },
+
+  "StepLR": {
+    "decay_step": 30,
+    "gamma": 0.1
+  },
+
+  "WarmupMultiStepLR": {
+    "steps": [20, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240, 255],
+    "gamma": 0.6,
+    "warmup_factor": 0.01,
+    "warmup_iters": 10,
+    "warmup_method": "linear"
+  }
+}

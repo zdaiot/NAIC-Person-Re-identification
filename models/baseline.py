@@ -9,6 +9,12 @@ class Baseline(nn.Module):
     in_planes = 2048
 
     def __init__(self, num_classes, last_stride, model_path):
+        """
+
+        :param num_classes: 类别数目；类型为int
+        :param last_stride: resnet最后一个下采样层的步长；类型为int
+        :param model_path: resnet预训练模型的权重；类型为str
+        """
         super(Baseline, self).__init__()
         self.base = ResNet(last_stride)
         self.base.load_param(model_path)
@@ -37,6 +43,9 @@ class Baseline(nn.Module):
         features = self.bottleneck(global_features)  # normalize for angular softmax
         cls_score = self.classifier(features)
         return cls_score, global_features, features  # global feature for triplet loss
+
+    def get_classify_result(self, outputs, labels, device):
+        return (outputs[0].max(1)[1] == labels.to(device)).float()
 
 
 if __name__ == '__main__':

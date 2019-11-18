@@ -5,18 +5,17 @@ import codecs
 import json
 import time
 import pickle
-from torch import optim
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
 from config import get_config
 from solver import Solver
 from models.model import build_model, get_model
-from losses.get_loss import get_loss, Loss
+from losses.get_loss import Loss
 from dataset.NAIC_dataset import get_loaders
 from utils.set_seed import seed_torch
 from models.sync_bn.batchnorm import convert_model
-from utils.custom_optim import make_optimizer, WarmupMultiStepLR
+from utils.custom_optim import get_optimizer, get_scheduler
 from evaluate import euclidean_dist, eval_func, re_rank, cos_dist
 
 
@@ -56,42 +55,19 @@ class TrainVal(object):
 
         # 加载超参数
         self.epoch = config.epoch
-        self.optimizer_name = config.optimizer_name
-        self.scheduler_name = config.scheduler_name
 
         # 实例化实现各种子函数的 solver 类
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.solver = Solver(self.model, self.device)
 
         # 加载损失函数
-        # self.criterion = get_loss(config.selected_loss, config.margin, config.label_smooth, self.num_classes)
         self.criterion = Loss(self.model_name, config.selected_loss, config.margin, self.num_classes)
 
         # 加载优化函数
-        if self.optimizer_name == 'Adam':
-            # self.optim = optim.Adam(self.model.module.parameters(), config.base_lr, weight_decay=config.weight_decay)
-            self.optim = optim.Adam(
-                [{'params': filter(lambda p: p.requires_grad, self.model.module.feature_layer.parameters()), 'lr': config.base_lr * 0.1},
-                 {'params': self.model.module.classifier.parameters(), 'lr': config.base_lr}],
-                weight_decay=config.weight_decay)
-        elif self.optimizer_name == 'SGD':
-            self.optim = optim.SGD(
-                [{'params': self.model.module.feature_layer.parameters(), 'lr': config.base_lr * 0.1},
-                 {'params': self.model.module.classifier.parameters(), 'lr': config.base_lr}],
-                weight_decay=config.weight_decay, momentum=config.momentum_SGD, nesterov=True)
-        elif self.optimizer_name == 'author':
-            self.optim = make_optimizer('Adam', config.base_lr, config.momentum_SGD,
-                                        config.bias_lr_factor,
-                                        config.weight_decay, config.weight_decay_bias, self.model, self.num_gpus)
+        self.optim = get_optimizer(config, self.model)
 
         # 加载学习率衰减策略
-        if self.scheduler_name == 'StepLR':
-            self.scheduler = optim.lr_scheduler.StepLR(self.optim, step_size=config.step, gamma=0.1)
-        elif self.scheduler_name == 'COS':
-            self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optim, T_max=config.cos_max, eta_min=1e-8)
-        elif self.scheduler_name == 'author':
-            self.scheduler = WarmupMultiStepLR(self.optim, config.steps, config.gamma, config.warmup_factor,
-                                               config.warmup_iters, config.warmup_method)
+        self.scheduler = get_scheduler(config, self.optim)
 
         # 创建保存权重的路径
         self.model_path = os.path.join(config.save_path, config.model_name)
@@ -145,7 +121,7 @@ class TrainVal(object):
                 self.writer.add_scalar('TrainAccIteration', train_acc_iteration, global_step)
 
                 descript = '[Train][epoch: {}/{}][Lr :{:.7f}][Acc: {:.2f}]'.format(epoch, self.epoch,
-                                                                               self.scheduler.get_lr()[0],
+                                                                               self.scheduler.get_lr()[1],
                                                                                train_acc_iteration) + descript
                 tbar.set_description(desc=descript)
 
@@ -155,7 +131,7 @@ class TrainVal(object):
             # 写到tensorboard中
             epoch_acc = epoch_corrects / images_number * 100
             self.writer.add_scalar('TrainAccEpoch', epoch_acc, epoch)
-            self.writer.add_scalar('Lr', self.scheduler.get_lr()[0], epoch)
+            self.writer.add_scalar('Lr', self.scheduler.get_lr()[1], epoch)
             descript = self.criterion.record_loss_epoch(index, self.writer.add_scalar, epoch)
 
             # Print the log info

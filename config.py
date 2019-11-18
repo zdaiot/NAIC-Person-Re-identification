@@ -12,6 +12,7 @@ def get_config():
         config = Namespace(**config)
     else:
         parser = argparse.ArgumentParser()
+
         # model hyper-parameters
         parser.add_argument('--batch_size', type=int, default=64, help='batch size')
         parser.add_argument('--num_instances', type=int, default=4,
@@ -39,32 +40,14 @@ def get_config():
         parser.add_argument('--selected_loss', type=str, default='1*CrossEntropy+1*Triplet',
                             help='Select the loss function, softmax_triplet/softmax/triplet')
         parser.add_argument('--margin', type=float, default=0.3, help='margin coefficient in triplet loss')
-        parser.add_argument('--label_smooth', type=bool, default=False, help='use label smooth in cross entropy')
 
         # 优化器设置
         parser.add_argument('--optimizer_name', type=str, default='Adam',
-                            help='which optimizer to use, Adam/SGD/author')
-        parser.add_argument('--momentum_SGD', type=float, default=0.9, help='momentum in SGD')
-        parser.add_argument('--base_lr', type=float, default=1e-4, help='init lr')
-        parser.add_argument('--bias_lr_factor', type=float, default=1,
-                            help='only use when optimizer_name=author, bias_lr=base_lr*bias_lr_factor')
-        parser.add_argument('--weight_decay', type=float, default=5e-4, help='weight_decay in optimizer')
-        parser.add_argument('--weight_decay_bias', type=float, default=0.0,
-                            help='only use when optimizer_name=author, weight_decay for bias')
-
+                            help='which optimizer to use, SGD/SDG_bias/Adam/Adam_bias')
         # 学习率衰减策略
-        parser.add_argument('--scheduler_name', type=str, default='COS',
-                            help='which scheduler to use, StepLR/COS/author')
-        parser.add_argument('--cos_max', type=int, default=20, help='use in CosineAnnealingLR')
-        parser.add_argument('--step', type=int, default=20, help='use in StepLR')
-        # 设置WarmupMultiStepLR, 只有当scheduler_name=author时下面参数才有作用
-        parser.add_argument('--steps', type=list, default=[20, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195,
-                                                           210, 225, 240, 255], help='')
-        parser.add_argument('--gamma', type=float, default=0.6, help='')
-        parser.add_argument('--warmup_factor', type=float, default=0.01, help='')
-        parser.add_argument('--warmup_iters', type=int, default=10,
-                            help='The first warmup_iters epoch adopts warm up strategy')
-        parser.add_argument('--warmup_method', type=str, default='linear', help='warmup method, constant/linear')
+        parser.add_argument('--scheduler_name', type=str, default='Cosine',
+                            help='which scheduler to use, StepLR/Cosine/WarmupMultiStepLR')
+        parser.add_argument('--config_lr_optim_path', type=str, default='./config.json')
 
         # path set
         parser.add_argument('--save_path', type=str, default='./checkpoints')
@@ -76,7 +59,13 @@ def get_config():
                             help='How to measure similarity, cos_dist/re_rank/euclidean_dist')
 
         config = parser.parse_args()
-        # config = {k: v for k, v in args._get_kwargs()}
+
+        with open(config.config_lr_optim_path, 'r', encoding='utf-8') as json_file:
+            config_lr_optim = json.load(json_file)
+            # dict to namespace
+        config_lr_optim = Namespace(**config_lr_optim)
+
+        config = Namespace(**vars(config), **vars(config_lr_optim))
 
     return config
 

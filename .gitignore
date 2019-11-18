@@ -5,7 +5,7 @@ __pycache__
 dataset/NAIC_data
 checkpoints/
 *.pkl
-*.json
+result.json
 .fuse_hidde*
 *.so
 evaluate/eval_cylib/eval_metrics_cy.c

@@ -1,9 +1,68 @@
 from bisect import bisect_right
 import torch
+from torch import optim
+
+
+def get_optimizer(config, model):
+    """
+
+    :param config: 配置参数
+    :param model: 网络模型
+    :return: 优化器
+    """
+    # 加载优化函数
+    if config.optimizer_name == 'Adam':
+        assert config.model_name != 'MGN', "This optimizer not support MGN"
+        optimizer = optim.Adam(
+            [{'params': filter(lambda p: p.requires_grad, model.module.feature_layer.parameters()),
+              'lr': config.base_lr * 0.1},
+             {'params': model.module.classifier.parameters(), 'lr': config.base_lr}],
+            weight_decay=config.weight_decay)
+    elif config.optimizer_name == 'SGD':
+        assert config.model_name != 'MGN', "This optimizer not support MGN"
+        optimizer = optim.SGD(
+            [{'params': model.module.feature_layer.parameters(), 'lr': config.base_lr * 0.1},
+             {'params': model.module.classifier.parameters(), 'lr': config.base_lr}],
+            weight_decay=config.weight_decay, momentum=config.SGD['momentum'], nesterov=True)
+    elif config.optimizer_name == 'SGD_bias':
+        optimizer = make_optimizer('SGD', config.base_lr, config.SGD_bias['momentum'],
+                                   config.SGD_bias["bias_lr_factor"],
+                                   config.weight_decay, config.SGD_bias['weight_decay_bias'], model)
+    elif config.optimizer_name == 'Adam_bias':
+        optimizer = make_optimizer('Adam', config.base_lr, config.Adam_bias['momentum'],
+                                   config.Adam_bias["bias_lr_factor"],
+                                   config.weight_decay, config.Adam_bias['weight_decay_bias'], model)
+    return optimizer
+
+
+def get_scheduler(config, optimizer):
+    """
+
+    :param config: 配置参数
+    :param optimizer: 优化器
+    :return: 学习率衰减策略
+    """
+    # 加载学习率衰减策略
+    if config.scheduler_name == 'StepLR':
+        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=config.StepLR['decay_step'],
+                                              gamma=config.StepLR["gamma"])
+    elif config.scheduler_name == 'Cosine':
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=config.Cosine['restart_step'],
+                                                         eta_min=config.Cosine['eta_min'])
+    elif config.scheduler_name == 'author':
+        scheduler = WarmupMultiStepLR(optimizer,
+                                      config.WarmupMultiStepLR["steps"],
+                                      config.WarmupMultiStepLR["gamma"],
+                                      config.WarmupMultiStepLR["warmup_factor"],
+                                      config.WarmupMultiStepLR["warmup_iters"],
+                                      config.WarmupMultiStepLR["warmup_method"]
+                                      )
+    return scheduler
 
 
 class WarmupMultiStepLR(torch.optim.lr_scheduler._LRScheduler):
-    def __init__(self, optimizer, milestones, gamma=0.1, warmup_factor=1.0 / 3, warmup_iters=500, warmup_method="linear",
+    def __init__(self, optimizer, milestones, gamma=0.1, warmup_factor=1.0 / 3, warmup_iters=500,
+                 warmup_method="linear",
                  last_epoch=-1):
         if not list(milestones) == sorted(milestones):
             raise ValueError("Milestones should be a list of" " increasing integers. Got {}", milestones)

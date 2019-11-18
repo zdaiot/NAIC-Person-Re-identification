@@ -1,43 +1,17 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from losses.triplet_loss import TripletLoss, CrossEntropyLabelSmooth, TripletLossOrigin
-
-
-def get_loss(selected_loss, margin, label_smooth, num_classes):
-    """
-
-    :param selected_loss: loss的种类；类型为str
-    :param margin: triplet loss中的margin参数；类型为float
-    :param label_smooth: 交叉熵函数中是否使用label smooth；类型为bool
-    :param num_classes: 训练集的类别数；类型为int
-    :return: 损失函数；类型为可调用的函数
-    """
-    triplet = TripletLoss(margin)
-
-    if label_smooth:
-        xent = CrossEntropyLabelSmooth(num_classes=num_classes)
-        print("label smooth on, num_classes:", num_classes)
-    else:
-        xent = F.cross_entropy
-
-    if selected_loss == 'softmax':
-        def loss_func(score, feat, target):
-            return xent(score, target)
-    elif selected_loss == 'triplet':
-        def loss_func(score, feat, target):
-            return triplet(feat, target)[0]
-    elif selected_loss == 'softmax_triplet':
-        def loss_func(score, feat, target):
-            return xent(score, target) + triplet(feat, target)[0]
-    else:
-        print('expected selected_loss should be softmax, triplet or softmax_triplet, '
-              'but got {}'.format(selected_loss))
-    return loss_func
 
 
 class Loss(nn.Module):
     def __init__(self, model_name, loss_name, margin, num_classes):
+        """
+
+        :param model_name: 模型的名称；类型为str
+        :param loss_name: 损失的名称；类型为str
+        :param margin: TripletLoss中的参数；类型为float
+        :param num_classes: 网络的参数
+        """
         super(Loss, self).__init__()
         self.model_name = model_name
         self.loss_name = loss_name
@@ -79,7 +53,6 @@ class Loss(nn.Module):
         :param outputs: 网络的输出，具体维度和网络有关
         :param labels: 数据的真实类标，具体维度和网络有关
         :return loss_sum: 损失函数之和，未经过item()函数，可用于反向传播
-        :return self.log: 维度为[1, len(self.loss)]，前面几个分别存放某次迭代各个损失函数的损失值（经过了item()），最后一个存放某次迭代损失值之和
         """
         losses = []
         # 计算每一个损失函数的损失值
@@ -126,6 +99,12 @@ class Loss(nn.Module):
         return loss_sum
 
     def record_loss_iteration(self, writer_function=None, global_step=None):
+        """ 用于记录每一次迭代的结果
+
+        :param writer_function: tensorboard的写入函数；类型为callable
+        :param global_step: 当前的步数；类型为int
+        :return: [损失名称: 损失值][损失名称: 损失值][损失名称: 损失值]；类型为str
+        """
         descript = []
         for l, each_loss in zip(self.loss_struct, self.log):
             if writer_function:
@@ -134,6 +113,13 @@ class Loss(nn.Module):
         return ''.join(descript)
 
     def record_loss_epoch(self, num_iterations, writer_function=None, global_step=None):
+        """ 用于记录每一个epoch的结果
+
+        :param num_iterations：该epoch包含多少个迭代；类型为int
+        :param writer_function: tensorboard的写入函数；类型为callable
+        :param global_step: 当前的步数；类型为int
+        :return: [Average 损失名称: 平均损失值][Average 损失名称: 平均损失值][Average 损失名称: 平均损失值]；类型为str
+        """
         descript = []
         for l, each_loss in zip(self.loss_struct, self.log_sum):
             if writer_function:

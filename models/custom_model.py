@@ -85,8 +85,7 @@ class CustomModel(nn.Module):
             # for p in model.layer1.parameters(): p.requires_grad = False
             in_features = model.last_linear.in_features
             self.feature_layer = torch.nn.Sequential(*list(model.children())[:-1])
-
-        # self.bottleneck = torch.nn.BatchNorm1d(in_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        # self.bottleneck = torch.nn.BatchNorm1d(in_features, eps=1e-05, momentum=0.1)
         # self.fc = torch.nn.Linear(in_features=in_features, out_features=self.num_classes, bias=False)
         self.classifier = ClassBlock(in_features, self.num_classes, droprate=0.5, return_f=True)
 
