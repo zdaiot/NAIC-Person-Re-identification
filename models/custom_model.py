@@ -87,11 +87,11 @@ class CustomModel(nn.Module):
             in_features = model.last_linear.in_features
             self.feature_layer = torch.nn.Sequential(*list(model.children())[:-1])
 
-        # self.classifier = ClassBlock(in_features, self.num_classes, droprate=0.5, return_f=True)
+        self.classifier = ClassBlock(in_features, self.num_classes, droprate=0.5, return_f=True)
 
-        self.bottleneck = torch.nn.BatchNorm1d(in_features, eps=1e-05, momentum=0.1)
-        self.bottleneck.bias.requires_grad_(False)
-        self.classifier = Arcface(in_features, self.num_classes)
+        # self.bottleneck = torch.nn.BatchNorm1d(in_features, eps=1e-05, momentum=0.1)
+        # self.bottleneck.bias.requires_grad_(False)
+        # self.classifier = Arcface(in_features, self.num_classes)
 
     def forward(self, x, labels):
         """
@@ -104,10 +104,10 @@ class CustomModel(nn.Module):
         global_features = self.feature_layer(x)
         global_features = global_features.view(global_features.shape[0], -1)
 
-        # scores, features = self.classifier(global_features)
+        scores, features = self.classifier(global_features)
 
-        features = self.bottleneck(global_features)
-        scores = self.classifier(features, labels)
+        # features = self.bottleneck(global_features)
+        # scores = self.classifier(features, labels)
         return scores, global_features, features
 
     def get_classify_result(self, outputs, labels, device):

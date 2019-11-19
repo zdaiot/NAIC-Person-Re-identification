@@ -17,7 +17,7 @@ def get_config():
         parser.add_argument('--batch_size', type=int, default=64, help='batch size')
         parser.add_argument('--num_instances', type=int, default=4,
                             help='num_instances for each class, only use in train_dataloader')
-        parser.add_argument('--epoch', type=int, default=200, help='epoch')
+        parser.add_argument('--epoch', type=int, default=150, help='epoch')
         parser.add_argument('--num_workers', type=int, default=8)
         parser.add_argument('--selected_fold', type=list, default=[0], help='what folds for training?')
 
@@ -37,7 +37,7 @@ def get_config():
         parser.add_argument('--last_stride', type=int, default=1, help='last stride in the resnet model')
 
         # loss set
-        parser.add_argument('--selected_loss', type=str, default='1*CrossEntropy+1*Triplet',
+        parser.add_argument('--selected_loss', type=str, default='1.0*CrossEntropy+1*Triplet',
                             help='Select the loss function, CrossEntropy/SmoothCrossEntropy/Triplet')
         parser.add_argument('--margin', type=float, default=0.3, help='margin coefficient in triplet loss')
 

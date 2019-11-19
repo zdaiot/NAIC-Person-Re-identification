@@ -155,7 +155,7 @@ class queryGallerySeparate:
 
         :param root: 训练数据集的根目录；类型为str
         :param train_list_txt_path: 存储全部数据集对应的id的txt文件；类型为str
-        :param class_id: 筛选用于训练集的id，类型为list
+        :param class_id: 筛选用于验证集的id，类型为list
         """
         self.root = root
         self.train_list_txt_path = train_list_txt_path
@@ -171,7 +171,7 @@ class queryGallerySeparate:
         :return gallery_list: 数据库 [[sample_name, label], [sample_name, label]]
         :return len(query_list): 查询集的样本总数
         """
-        # 依据类标从小到大进行排序，并返回对应的原始下标
+        # 依据类标从小到大进行排序，并返回对应的原始下标 [原始下标，从小到大排序结果]
         sorted_labels = sorted(enumerate(self.labels_list), key=lambda x: x[1])
         sorted_index = []
         sorted_labels_list = []
@@ -403,7 +403,7 @@ if __name__ == "__main__":
             batch_size=8,
             num_instances=4,
             num_works=8,
-            augmentation_flag=False,
+            augmentation_flag=True,
             erase_prob=0.3,
             gray_prob=0.3
         )
