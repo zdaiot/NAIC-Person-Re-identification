@@ -72,8 +72,8 @@ class CreateSubmission(object):
         with torch.no_grad():
             for i, (images, names) in enumerate(tbar):
                 # 完成网络的前向传播
-                # features = self.solver.forward(images)[-1]
-                features = self.solver.tta(images)
+                # features = self.solver.forward((images, torch.zeros((images.size(0)))))[-1]
+                features = self.solver.tta((images, torch.zeros((images.size(0)))))
 
                 features_all.append(features.detach().cpu())
                 names_all.extend(names)
@@ -137,7 +137,7 @@ class CreateSubmission(object):
 
 
 if __name__ == "__main__":
-    test_baseline = False
+    test_baseline = True
     config = get_config()
     mean = (0.485, 0.456, 0.406)
     std = (0.229, 0.224, 0.225)

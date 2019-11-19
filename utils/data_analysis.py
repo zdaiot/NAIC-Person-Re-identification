@@ -72,7 +72,9 @@ def get_folds_id(train_list_path, n_splits):
     train_valid_id = list()
     train_valid_id_number = list()
     for key, value in id_numbers.items():
-        if value in [1, 864, 1018]:
+        if value == 1:
+            pass
+        elif value >= 100:
             pass
         else:
             train_valid_id.append(key)
@@ -81,7 +83,8 @@ def get_folds_id(train_list_path, n_splits):
     train_id_folds, valid_id_folds = list(), list()
     # 注意这里的随机种子要固定
     skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=1)
-    for train_id_fold, valid_id_fold in skf.split(train_valid_id, train_valid_id_number):
+    # skf = KFold(n_splits, shuffle=True, random_state=2019)
+    for train_id_fold, valid_id_fold in skf.split(train_valid_id, train_valid_id_number):  #
         train_id_fold, valid_id_fold = train_id_fold.tolist(), valid_id_fold.tolist()
         train_id_fold = train_id_fold + train_id_pin
         valid_id_fold = valid_id_fold + valid_id_pin
@@ -99,7 +102,9 @@ def get_all_id(train_list_path):
     train_id = list()
     id_numbers = dataset_statics(train_list_path)
     for key, value in id_numbers.items():
-        if value in [1, 864, 1018]:
+        if value == 1:
+            pass
+        elif value >= 100:
             pass
         else:
             train_id.append(key)
@@ -174,8 +179,8 @@ def image_channels_statistics(images_path):
 
 
 if __name__ == '__main__':
-    train_list_path = 'data/Uaic/初赛训练集/初赛训练集/train_list.txt'
-    train_data_dir = 'data/Uaic/初赛训练集/初赛训练集/train_set'
+    train_list_path = 'dataset/NAIC_data/初赛训练集/train_list.txt'
+    train_data_dir = 'dataset/NAIC_data/初赛训练集/train_set'
     id_numbers = dataset_statics(train_list_path)
     show_id = []
     show_number = 864
