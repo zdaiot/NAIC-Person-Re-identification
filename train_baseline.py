@@ -19,11 +19,12 @@ from utils.custom_optim import get_optimizer, get_scheduler
 
 
 class TrainBaseline(object):
-    def __init__(self, config, num_classes):
+    def __init__(self, config, num_classes, train_triplet=False):
         """
 
         :param config: 配置参数
         :param num_classes: 训练集的类别数；类型为int
+        :param train_triplet: 是否只训练triplet损失；类型为bool
         """
         self.num_classes = num_classes
 
@@ -48,6 +49,11 @@ class TrainBaseline(object):
         # 实例化实现各种子函数的 solver 类
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.solver = Solver(self.model, self.device)
+
+        # 如果只训练Triplet损失
+        if train_triplet:
+            assert 'CrossEntropy' not in config.selected_loss
+            self.solver.load_checkpoint(os.path.join(self.model_path, '{}_best.pth'.format(self.model_name)))
 
         # 加载损失函数
         self.criterion = Loss(self.model_name, config.selected_loss, config.margin, self.num_classes)

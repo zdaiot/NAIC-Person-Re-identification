@@ -20,7 +20,7 @@ from evaluate import euclidean_dist, eval_func, re_rank, cos_dist
 
 
 class TrainVal(object):
-    def __init__(self, config, num_query, num_classes, num_valid_classes, fold):
+    def __init__(self, config, num_query, num_classes, num_valid_classes, fold, train_triplet=False):
         """
 
         :param config: 配置参数
@@ -28,6 +28,7 @@ class TrainVal(object):
         :param num_classes: 该fold训练集的类别数；类型为int
         :param num_valid_classes: 该fold验证集的类别数；类型为int
         :param fold: 训练的哪一折；类型为int
+        :param train_triplet: 是否只训练triplet损失；类型为bool
         """
         self.num_query = num_query
         self.num_classes = num_classes
@@ -59,6 +60,12 @@ class TrainVal(object):
         # 实例化实现各种子函数的 solver 类
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.solver = Solver(self.model, self.device)
+
+        # 如果只训练Triplet损失
+        if train_triplet:
+            assert 'CrossEntropy' not in config.selected_loss
+            self.solver.load_checkpoint(os.path.join(self.model_path, '{}_fold{}_best.pth'.format(self.model_name,
+                                                                                                  self.fold)))
 
         # 加载损失函数
         self.criterion = Loss(self.model_name, config.selected_loss, config.margin, self.num_classes)

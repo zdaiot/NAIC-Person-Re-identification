@@ -2,6 +2,7 @@
 - Pytorch 1.1.0
 - Torchvision 0.3.0
 - Python3.7
+- pretrainedmodels
 
 ## How to run
 ### Clone Our Project
@@ -42,8 +43,3 @@ make
 cd ../..
 python evaluate/eval_cylib/test_cython.py
 ```
-
-## TODO
-- [ ] Data cleaning
-- [ ] add more model
-- [ ] Normalized custom_optim.py
