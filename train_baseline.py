@@ -50,11 +50,6 @@ class TrainBaseline(object):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.solver = Solver(self.model, self.device)
 
-        # 如果只训练Triplet损失
-        if train_triplet:
-            assert 'CrossEntropy' not in config.selected_loss
-            self.solver.load_checkpoint(os.path.join(self.model_path, '{}_best.pth'.format(self.model_name)))
-
         # 加载损失函数
         self.criterion = Loss(self.model_name, config.selected_loss, config.margin, self.num_classes)
 
@@ -68,6 +63,11 @@ class TrainBaseline(object):
         self.model_path = os.path.join(config.save_path, config.model_name)
         if not os.path.exists(self.model_path):
             os.makedirs(self.model_path)
+
+        # 如果只训练Triplet损失
+        if train_triplet:
+            assert 'CrossEntropy' not in config.selected_loss
+            self.solver.load_checkpoint(os.path.join(self.model_path, '{}_best.pth'.format(self.model_name)))
 
         # 保存json文件和初始化tensorboard
         TIMESTAMP = "{0:%Y-%m-%dT%H-%M-%S}".format(datetime.datetime.now())
