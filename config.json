@@ -1,5 +1,5 @@
 {
-  "base_lr": 2e-4,
+  "base_lr": 1e-4,
   "weight_decay": 5e-4,
 
   "SGD": {
