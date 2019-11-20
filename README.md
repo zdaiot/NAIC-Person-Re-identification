@@ -43,3 +43,13 @@ make
 cd ../..
 python evaluate/eval_cylib/test_cython.py
 ```
+
+### Train baseline
+```bash
+python train_baseline.py
+```
+
+### Train Cross validation
+```bash
+python train.py
+```

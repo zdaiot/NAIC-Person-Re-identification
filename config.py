@@ -24,7 +24,7 @@ def get_config():
         # dataset set
         parser.add_argument('--augmentation_flag', type=bool, default=True,
                             help='if true, use DataAugmentation class in train set')
-        parser.add_argument('--erase_prob', type=float, default=0.3,
+        parser.add_argument('--erase_prob', type=float, default=0.0,
                             help='when augmentation_flag=True, erase probability in DataAugmentation class')
         parser.add_argument('--gray_prob', type=float, default=0.3,
                             help='when augmentation_flag=True, gray probability in DataAugmentation class')
