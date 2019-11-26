@@ -77,7 +77,6 @@ class TrainVal(object):
 
         # 如果只训练Triplet损失
         if train_triplet:
-            assert 'CrossEntropy' not in config.selected_loss
             self.solver.load_checkpoint(os.path.join(self.model_path, '{}_fold{}_best.pth'.format(self.model_name,
                                                                                                   self.fold)))
 

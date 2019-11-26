@@ -66,7 +66,6 @@ class TrainBaseline(object):
 
         # 如果只训练Triplet损失
         if train_triplet:
-            assert 'CrossEntropy' not in config.selected_loss
             self.solver.load_checkpoint(os.path.join(self.model_path, '{}.pth'.format(self.model_name)))
 
         # 保存json文件和初始化tensorboard
