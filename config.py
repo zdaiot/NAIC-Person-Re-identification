@@ -19,7 +19,7 @@ def get_config():
                             help='num_instances for each class, only use in train_dataloader')
         parser.add_argument('--epoch', type=int, default=180, help='epoch')
         parser.add_argument('--num_workers', type=int, default=8)
-        parser.add_argument('--selected_fold', type=list, default=[0, 1, 2, 3, 4], help='what folds for training?')
+        parser.add_argument('--selected_fold', type=list, default=[2], help='what folds for training?')
 
         # dataset set
         parser.add_argument('--augmentation_flag', type=bool, default=True,
@@ -32,7 +32,7 @@ def get_config():
         parser.add_argument('--use_amplify', type=bool, default=False, help='Data extension of training data set')
 
         # model set 
-        parser.add_argument('--model_name', type=str, default='se_resnext101_32x4d',
+        parser.add_argument('--model_name', type=str, default='resnet50',
                             help='resnet50/resnet34/resnet101/resnet152/se_resnet50/MGN')
         parser.add_argument('--last_stride', type=int, default=1, help='last stride in the resnet model')
 
