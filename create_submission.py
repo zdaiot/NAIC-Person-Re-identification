@@ -143,7 +143,7 @@ if __name__ == "__main__":
     std = (0.229, 0.224, 0.225)
     train_dataset_root = os.path.join(config.dataset_root, '初赛训练集')
 
-    test_dataloader, num_query = get_test_loader(os.path.join(config.dataset_root, '初赛A榜测试集'), config.batch_size, config.num_workers)
+    test_dataloader, num_query = get_test_loader(os.path.join(config.dataset_root, '初赛B榜测试集'), config.batch_size, config.num_workers)
 
     if test_baseline:
         # 测试baseline

@@ -18,6 +18,7 @@ Structure of the ../Input folder can be like:
 ```bash
 初赛训练集
 初赛A榜测试集
+初赛B榜测试集
 submission_example_A.json
 ```
 Create soft links of datasets in the following directories:
@@ -29,8 +30,8 @@ cd NAIC_data
 ln -s ../../../Input/初赛训练集/ ./初赛训练集
 ln -s ../../../Input/初赛A榜测试集/ ./初赛A榜测试集
 ln -s ../../../Input/submission_example_A.json ./submission_example_A.json
-# TODO
 ln -s ~/.cache/torch/checkpoints/resnet50-19c8e357.pth ./ 
+ln -s ../../../Input/初赛B榜测试集/ ./初赛B榜测试集
 ``` 
 
 ### Make Eval Code

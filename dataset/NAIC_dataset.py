@@ -375,8 +375,12 @@ def get_test_loader(test_dataset_root, batch_size, num_workers):
     :return: test_dataloader: 测试数据集的Dataloader
     :return num_query: 查询集数量；类型为int
     """
-    pic_path_query = os.path.join(test_dataset_root, 'query_a')
-    pic_path_gallery = os.path.join(test_dataset_root, 'gallery_a')
+    if '初赛B榜测试集' in test_dataset_root:
+        pic_path_query = os.path.join(test_dataset_root, 'query_b')
+        pic_path_gallery = os.path.join(test_dataset_root, 'gallery_b')
+    else:
+        pic_path_query = os.path.join(test_dataset_root, 'query_a')
+        pic_path_gallery = os.path.join(test_dataset_root, 'gallery_a')
 
     pic_list_query = glob.glob(pic_path_query + '/*.png')
     pic_list_gallery = glob.glob(pic_path_gallery + '/*.png')
